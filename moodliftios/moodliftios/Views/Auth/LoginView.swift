@@ -1,0 +1,243 @@
+import SwiftUI
+
+struct LoginView: View {
+    @State private var email = ""
+    @State private var password = ""
+    @State private var showPassword = false
+    @State private var isLoading = false
+    @State private var errorMessage: String?
+    @State private var shakeError = false
+
+    var body: some View {
+        ZStack {
+            // Background gradient
+            LinearGradient(
+                colors: [.primaryGradientStart, .primaryGradientEnd],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 24) {
+                    Spacer()
+                        .frame(height: 20)
+
+                    // MARK: - Header
+                    headerSection
+
+                    // MARK: - Login Card
+                    loginCard
+
+                    // MARK: - Sign Up Link
+                    signUpLink
+
+                    // MARK: - Daily Reminder
+                    reminderCard
+
+                    Spacer()
+                        .frame(height: 40)
+                }
+                .padding(.horizontal, 24)
+            }
+        }
+        .navigationBarHidden(true)
+    }
+
+    // MARK: - Header
+
+    private var headerSection: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "heart.fill")
+                .font(.system(size: 52))
+                .foregroundStyle(.white)
+                .shadow(color: .black.opacity(0.12), radius: 6, y: 3)
+
+            Text("MoodLift")
+                .font(.system(size: 34, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+
+            Text("Welcome back!")
+                .font(.system(size: 17, weight: .medium))
+                .foregroundStyle(.white.opacity(0.9))
+        }
+        .padding(.bottom, 8)
+    }
+
+    // MARK: - Login Card
+
+    private var loginCard: some View {
+        VStack(spacing: 20) {
+            // Error message
+            if let errorMessage {
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.subheadline)
+                    Text(errorMessage)
+                        .font(.subheadline)
+                        .multilineTextAlignment(.leading)
+                }
+                .foregroundStyle(Color.errorRed)
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.errorRed.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .offset(x: shakeError ? -6 : 0)
+                .animation(
+                    .default.repeatCount(3, autoreverses: true).speed(6),
+                    value: shakeError
+                )
+            }
+
+            // Email field
+            HStack(spacing: 12) {
+                Image(systemName: "envelope.fill")
+                    .foregroundStyle(Color.lightText)
+                    .frame(width: 20)
+
+                TextField("Email address", text: $email)
+                    .textContentType(.emailAddress)
+                    .keyboardType(.emailAddress)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+            }
+            .padding(16)
+            .background(Color.appBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+
+            // Password field
+            HStack(spacing: 12) {
+                Image(systemName: "lock.fill")
+                    .foregroundStyle(Color.lightText)
+                    .frame(width: 20)
+
+                Group {
+                    if showPassword {
+                        TextField("Password", text: $password)
+                    } else {
+                        SecureField("Password", text: $password)
+                    }
+                }
+                .textContentType(.password)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+
+                Button {
+                    showPassword.toggle()
+                } label: {
+                    Image(systemName: showPassword ? "eye.slash.fill" : "eye.fill")
+                        .foregroundStyle(Color.lightText)
+                        .contentTransition(.symbolEffect(.replace))
+                }
+            }
+            .padding(16)
+            .background(Color.appBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+
+            // Sign In button
+            Button(action: handleLogin) {
+                Group {
+                    if isLoading {
+                        ProgressView()
+                            .tint(.white)
+                    } else {
+                        Text("Sign In")
+                            .font(.system(size: 17, weight: .semibold))
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 52)
+                .foregroundStyle(.white)
+                .background(
+                    LinearGradient(
+                        colors: [.primaryGradientStart, .primaryGradientEnd],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .shadow(color: .encouragementPink.opacity(0.4), radius: 8, y: 4)
+            }
+            .disabled(isLoading || email.isEmpty || password.isEmpty)
+            .opacity(email.isEmpty || password.isEmpty ? 0.7 : 1.0)
+            .padding(.top, 4)
+        }
+        .padding(24)
+        .background(.white)
+        .clipShape(RoundedRectangle(cornerRadius: 24))
+        .shadow(color: .black.opacity(0.1), radius: 20, y: 10)
+    }
+
+    // MARK: - Sign Up Link
+
+    private var signUpLink: some View {
+        NavigationLink {
+            SignupView()
+        } label: {
+            HStack(spacing: 4) {
+                Text("Don't have an account?")
+                    .foregroundStyle(.white.opacity(0.85))
+                Text("Sign Up")
+                    .fontWeight(.bold)
+                    .foregroundStyle(.white)
+            }
+            .font(.subheadline)
+        }
+    }
+
+    // MARK: - Reminder Card
+
+    private var reminderCard: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "sparkles")
+                .font(.title3)
+                .foregroundStyle(Color.inspirationYellow)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Daily Check-ins")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                Text("Earn points & track your mood every day!")
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.8))
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.white.opacity(0.15))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+
+    // MARK: - Actions
+
+    private func handleLogin() {
+        guard !email.isEmpty, !password.isEmpty else { return }
+
+        errorMessage = nil
+        isLoading = true
+
+        Task {
+            do {
+                try await AuthService.shared.login(email: email, password: password)
+            } catch let error as APIError {
+                await MainActor.run {
+                    errorMessage = error.userMessage
+                    shakeError.toggle()
+                    isLoading = false
+                }
+            } catch {
+                await MainActor.run {
+                    errorMessage = "Something went wrong. Please try again."
+                    shakeError.toggle()
+                    isLoading = false
+                }
+            }
+        }
+    }
+}
+
+#Preview {
+    NavigationStack {
+        LoginView()
+    }
+}
