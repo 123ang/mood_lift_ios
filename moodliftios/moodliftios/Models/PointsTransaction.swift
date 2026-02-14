@@ -1,6 +1,6 @@
 import Foundation
 
-struct PointsTransaction: Codable, Identifiable {
+struct PointsTransaction: Codable, Identifiable, Sendable {
     let id: String
     let transactionType: String  // "earned" or "spent"
     let pointsAmount: Int

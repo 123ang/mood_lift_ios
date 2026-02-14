@@ -100,14 +100,39 @@ For local development, use:
 private let baseURL = "http://localhost:3000/api"
 ```
 
-### 4. Configure Notifications
+### 4. Local development – run the backend first
+
+To test sign up, login, and all API features locally:
+
+1. **Start the MoodLift backend** (sibling repo `mood_lift_web`):
+   ```bash
+   cd ../mood_lift_web
+   npm install
+   cp .env.example .env
+   # Edit .env: set DB_PASSWORD (and DB_* if needed)
+   ```
+2. **Create the database and schema** (PostgreSQL must be running):
+   ```bash
+   psql -U postgres -c "CREATE DATABASE moodlift;"
+   psql -U postgres -d moodlift -f models/schema.sql
+   ```
+3. **Start the API server** (default port 3000):
+   ```bash
+   npm run dev
+   ```
+   You should see: `MoodLift server running on port 3000`.
+4. **Run the iOS app** from Xcode (⌘R) with the simulator. The app uses `http://localhost:3000/api`; the simulator uses your Mac’s localhost, so sign up and login will hit this backend.
+
+If you see **"Something went wrong"** on sign up or login, the app likely cannot reach the API: ensure the backend is running on port 3000 and the database is set up.
+
+### 5. Configure Notifications
 
 In Xcode:
 1. Go to project settings > Signing & Capabilities
 2. Add **Push Notifications** capability
 3. Add **Background Modes** > Remote notifications
 
-### 5. Build and Run
+### 6. Build and Run
 
 1. Select your target device/simulator (iOS 17+)
 2. Build and run (Cmd+R)

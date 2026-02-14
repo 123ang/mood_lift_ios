@@ -1,6 +1,6 @@
 import Foundation
 
-struct SavedItem: Codable, Identifiable {
+struct SavedItem: Codable, Identifiable, Sendable {
     let id: String
     let contentId: String
     let contentText: String?

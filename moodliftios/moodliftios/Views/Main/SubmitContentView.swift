@@ -139,8 +139,11 @@ struct SubmitContentView: View {
                             }
                         } label: {
                             HStack(spacing: 6) {
-                                Image(systemName: category.icon)
-                                    .font(.caption.weight(.semibold))
+                                Image(category.imageAssetName)
+                                    .renderingMode(.template)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 18, height: 18)
                                 Text(category.displayName)
                                     .font(.caption.weight(.semibold))
                             }

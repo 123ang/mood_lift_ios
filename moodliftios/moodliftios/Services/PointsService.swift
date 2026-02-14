@@ -3,16 +3,16 @@ import Foundation
 class PointsService {
     static let shared = PointsService()
     
+    @MainActor
     func getPointsHistory(page: Int = 1, limit: Int = 50) async throws -> PaginatedResponse<PointsTransaction> {
         let params = ["page": "\(page)", "limit": "\(limit)"]
-        return try await APIService.shared.request(
-            endpoint: "/users/points-history",
-            queryParams: params
-        )
+        let data = try await APIService.shared.requestData(endpoint: "/users/points-history", queryParams: params)
+        return try APIDecoder.decode(PaginatedResponse<PointsTransaction>.self, from: data)
     }
     
     func getUserStats() async throws -> UserStats {
-        return try await APIService.shared.request(endpoint: "/users/stats")
+        let data = try await APIService.shared.requestData(endpoint: "/users/stats")
+        return try APIDecoder.decode(UserStats.self, from: data)
     }
     
     // Local calculation helpers

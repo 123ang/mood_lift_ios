@@ -1,6 +1,6 @@
 import Foundation
 
-struct CheckinInfo: Codable {
+struct CheckinInfo: Codable, @unchecked Sendable {
     let currentStreak: Int
     let lastCheckin: Date?
     let totalCheckins: Int
@@ -16,7 +16,7 @@ struct CheckinInfo: Codable {
     }
 }
 
-struct CheckinResponse: Codable {
+struct CheckinResponse: Codable, @unchecked Sendable {
     let message: String
     let pointsEarned: Int
     let newStreak: Int

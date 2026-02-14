@@ -1,6 +1,6 @@
 import Foundation
 
-struct User: Codable, Identifiable {
+struct User: Codable, Identifiable, Sendable {
     let id: String
     let email: String
     let username: String
@@ -29,7 +29,7 @@ struct User: Codable, Identifiable {
     }
 }
 
-struct AuthResponse: Codable {
+struct AuthResponse: Codable, Sendable {
     let token: String
     let user: User
 }

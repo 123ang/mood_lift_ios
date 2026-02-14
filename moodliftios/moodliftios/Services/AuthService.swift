@@ -27,7 +27,8 @@ class AuthService {
         await APIService.shared.setToken(token)
         
         do {
-            let user: User = try await APIService.shared.request(endpoint: "/auth/profile")
+            let data = try await APIService.shared.requestData(endpoint: "/auth/profile")
+            let user = try APIDecoder.decode(User.self, from: data)
             await MainActor.run {
                 self.currentUser = user
                 self.isAuthenticated = true
@@ -47,11 +48,12 @@ class AuthService {
             let password: String
         }
         
-        let response: AuthResponse = try await APIService.shared.request(
+        let data = try await APIService.shared.requestData(
             endpoint: "/auth/login",
             method: "POST",
             body: LoginBody(email: email, password: password)
         )
+        let response = try APIDecoder.decode(AuthResponse.self, from: data)
         
         KeychainHelper.save(key: tokenKey, value: response.token)
         await APIService.shared.setToken(response.token)
@@ -69,11 +71,12 @@ class AuthService {
             let password: String
         }
         
-        let response: AuthResponse = try await APIService.shared.request(
+        let data = try await APIService.shared.requestData(
             endpoint: "/auth/register",
             method: "POST",
             body: RegisterBody(email: email, username: username, password: password)
         )
+        let response = try APIDecoder.decode(AuthResponse.self, from: data)
         
         KeychainHelper.save(key: tokenKey, value: response.token)
         await APIService.shared.setToken(response.token)
@@ -95,7 +98,8 @@ class AuthService {
     
     func refreshProfile() async {
         do {
-            let user: User = try await APIService.shared.request(endpoint: "/auth/profile")
+            let data = try await APIService.shared.requestData(endpoint: "/auth/profile")
+            let user = try APIDecoder.decode(User.self, from: data)
             await MainActor.run {
                 self.currentUser = user
             }
@@ -110,10 +114,11 @@ class AuthService {
             let newPassword: String
         }
         
-        let _: EmptyResponse = try await APIService.shared.request(
+        let data = try await APIService.shared.requestData(
             endpoint: "/auth/change-password",
             method: "POST",
             body: ChangePasswordBody(currentPassword: currentPassword, newPassword: newPassword)
         )
+        _ = try APIDecoder.decode(EmptyResponse.self, from: data)
     }
 }

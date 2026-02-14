@@ -76,6 +76,7 @@ struct SavedItemsView: View {
                 FilterChip(
                     label: "All",
                     icon: "square.grid.2x2.fill",
+                    iconIsAsset: false,
                     color: .encouragementPink,
                     isSelected: viewModel.selectedCategory == nil
                 ) {
@@ -85,7 +86,8 @@ struct SavedItemsView: View {
                 ForEach(ContentCategory.allCases, id: \.self) { category in
                     FilterChip(
                         label: category.displayName,
-                        icon: category.icon,
+                        icon: category.imageAssetName,
+                        iconIsAsset: true,
                         color: category.color,
                         isSelected: viewModel.selectedCategory == category.rawValue
                     ) {
@@ -166,6 +168,7 @@ struct SavedItemsView: View {
 private struct FilterChip: View {
     let label: String
     let icon: String
+    var iconIsAsset: Bool = false
     let color: Color
     let isSelected: Bool
     let action: () -> Void
@@ -173,8 +176,18 @@ private struct FilterChip: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 6) {
-                Image(systemName: icon)
-                    .font(.caption.weight(.semibold))
+                Group {
+                    if iconIsAsset {
+                        Image(icon)
+                            .renderingMode(.template)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 16, height: 16)
+                    } else {
+                        Image(systemName: icon)
+                            .font(.caption.weight(.semibold))
+                    }
+                }
                 Text(label)
                     .font(.caption.weight(.semibold))
             }
@@ -215,8 +228,11 @@ private struct SavedItemCard: View {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 6) {
                     if let cat = categoryEnum {
-                        Image(systemName: cat.icon)
-                            .font(.caption2)
+                        Image(cat.imageAssetName)
+                            .renderingMode(.template)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 14, height: 14)
                         Text(cat.displayName)
                             .font(.caption2.weight(.semibold))
                     }

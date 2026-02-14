@@ -7,15 +7,17 @@ struct SettingsView: View {
     @State private var showTermsOfService = false
     @State private var reminderDate = Date()
 
-    private let purpleGradient = LinearGradient(
-        colors: [Color(hex: "#667eea"), Color(hex: "#764ba2")],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-    )
+    private var headerGradient: LinearGradient {
+        LinearGradient(
+            colors: [Color.primaryGradientStart, Color.primaryGradientEnd],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
 
     var body: some View {
         ZStack {
-            purpleGradient
+            Color.appBackground
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
@@ -91,6 +93,7 @@ struct SettingsView: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 16)
+        .background(headerGradient)
     }
 
     // MARK: - Notifications Section
@@ -103,7 +106,7 @@ struct SettingsView: View {
                 HStack {
                     Image(systemName: "bell.badge.fill")
                         .font(.system(size: 16))
-                        .foregroundStyle(Color(hex: "#667eea"))
+                        .foregroundStyle(Color.brandPrimary)
                         .frame(width: 28)
 
                     Text("Push Notifications")
@@ -130,7 +133,7 @@ struct SettingsView: View {
                     HStack {
                         Image(systemName: "clock.fill")
                             .font(.system(size: 16))
-                            .foregroundStyle(Color(hex: "#667eea"))
+                            .foregroundStyle(Color.brandPrimary)
                             .frame(width: 28)
 
                         Text("Daily Reminder")
@@ -174,7 +177,7 @@ struct SettingsView: View {
                 HStack {
                     Image(systemName: "lock.fill")
                         .font(.system(size: 16))
-                        .foregroundStyle(Color(hex: "#667eea"))
+                        .foregroundStyle(Color.brandPrimary)
                         .frame(width: 28)
 
                     Text("Change Password")
@@ -272,9 +275,9 @@ struct SettingsView: View {
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
-            .background(Color.errorRed)
+            .background(headerGradient)
             .clipShape(RoundedRectangle(cornerRadius: 16))
-            .shadow(color: Color.errorRed.opacity(0.3), radius: 8, y: 4)
+            .shadow(color: Color.primaryGradientStart.opacity(0.3), radius: 8, y: 4)
         }
         .padding(.top, 8)
     }
@@ -285,24 +288,24 @@ struct SettingsView: View {
         HStack(spacing: 8) {
             Image(systemName: icon)
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.9))
+                .foregroundStyle(Color.brandPrimary)
             Text(title)
                 .font(.caption.weight(.bold))
-                .foregroundStyle(.white.opacity(0.9))
+                .foregroundStyle(Color.darkText)
                 .textCase(.uppercase)
                 .tracking(0.5)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 4)
         .padding(.bottom, 8)
-        .padding(.top, 4)
+        .padding(.top, 12)
     }
 
     private func settingsRow(icon: String, title: String) -> some View {
         HStack {
             Image(systemName: icon)
                 .font(.system(size: 16))
-                .foregroundStyle(Color(hex: "#667eea"))
+                .foregroundStyle(Color.brandPrimary)
                 .frame(width: 28)
 
             Text(title)

@@ -58,7 +58,7 @@ struct HomeView: View {
                 }
             }
         }
-        .background(Color.white)
+        .background(Color.appBackground)
         .navigationBarHidden(true)
         .task {
             await viewModel.loadCheckinInfo()
@@ -74,34 +74,38 @@ struct HomeView: View {
         }
     }
 
-    // MARK: - Pink Header
+    // MARK: - Header (same gradient as Profile / Saved / Settings)
 
     private var pinkHeader: some View {
         ZStack(alignment: .bottom) {
-            // Pink background with title
             VStack(spacing: 0) {
                 VStack(spacing: 16) {
-                    HStack(spacing: 6) {
+                    HStack(spacing: 8) {
                         Image(systemName: "heart.fill")
-                            .font(.system(size: 32))
-                            .foregroundStyle(Color.encouragementPink)
+                            .font(.system(size: 28))
+                            .foregroundStyle(.white)
 
                         Text("MOODLIFT")
                             .font(.system(size: 24, weight: .bold, design: .rounded))
-                            .foregroundStyle(Color.darkText)
+                            .foregroundStyle(.white)
                             .tracking(1)
                     }
                     .padding(.top, 32)
                 }
                 .padding(.bottom, 24)
 
-                // Thick dark border divider
                 Rectangle()
-                    .fill(Color.borderColor)
-                    .frame(height: 2)
+                    .fill(Color.white.opacity(0.3))
+                    .frame(height: 1)
             }
             .frame(maxWidth: .infinity)
-            .background(Color.encouragementPinkLight)
+            .background(
+                LinearGradient(
+                    colors: [Color.primaryGradientStart, Color.primaryGradientEnd],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
 
             // Floating Welcome Pill
             welcomePill
@@ -121,9 +125,9 @@ struct HomeView: View {
                     .fill(.white)
                     .overlay(
                         Capsule()
-                            .stroke(Color.borderColor, lineWidth: 3)
+                            .stroke(Color.darkText.opacity(0.12), lineWidth: 2)
                     )
-                    .shadow(color: .borderColor.opacity(0.25), radius: 12, y: 6)
+                    .shadow(color: .black.opacity(0.08), radius: 12, y: 6)
             )
     }
 
@@ -294,10 +298,12 @@ private struct CategoryCard: View {
                 .font(.system(size: 18, weight: .bold, design: .rounded))
                 .foregroundStyle(Color.darkText)
 
-            Image(systemName: category.icon)
-                .font(.system(size: 48))
+            Image(category.imageAssetName)
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 48, height: 48)
                 .foregroundStyle(Color.darkText.opacity(0.7))
-                .frame(height: 64)
 
             Text(category.description)
                 .font(.system(size: 12))
@@ -325,7 +331,8 @@ private struct CategoryCard: View {
         .background(
             RoundedRectangle(cornerRadius: 28)
                 .fill(category.lightColor)
-                .shadow(color: .borderColor.opacity(0.12), radius: 12, y: 4)
+                .shadow(color: .black.opacity(0.12), radius: 10, x: 0, y: 4)
+                .shadow(color: .black.opacity(0.06), radius: 4, x: 0, y: 2)
         )
     }
 }

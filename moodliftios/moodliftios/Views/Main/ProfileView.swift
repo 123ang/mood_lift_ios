@@ -80,13 +80,15 @@ struct ProfileView: View {
                     icon: "flame.fill",
                     value: "\(viewModel.stats?.currentStreak ?? user?.currentStreak ?? 0)",
                     label: "Current Streak",
-                    gradientColors: [Color(hex: "#ff6b6b"), Color(hex: "#ee5a24")]
+                    tint: .encouragementPink,
+                    backgroundColor: .encouragementPinkLight
                 )
                 StatCard(
                     icon: "calendar.badge.checkmark",
                     value: "\(viewModel.stats?.totalCheckins ?? user?.totalCheckins ?? 0)",
                     label: "Total Check-ins",
-                    gradientColors: [Color(hex: "#4ecdc4"), Color(hex: "#2ecc71")]
+                    tint: .factsGreen,
+                    backgroundColor: .factsGreenLight
                 )
             }
 
@@ -95,13 +97,15 @@ struct ProfileView: View {
                     icon: "star.fill",
                     value: "\(viewModel.stats?.pointsBalance ?? user?.pointsBalance ?? 0)",
                     label: "Points Balance",
-                    gradientColors: [Color(hex: "#ffd93d"), Color(hex: "#f39c12")]
+                    tint: .inspirationYellow,
+                    backgroundColor: .inspirationYellowLight
                 )
                 StatCard(
                     icon: "trophy.fill",
                     value: "\(viewModel.stats?.totalPointsEarned ?? user?.totalPointsEarned ?? 0)",
                     label: "Total Earned",
-                    gradientColors: [Color(hex: "#45b7d1"), Color(hex: "#3498db")]
+                    tint: .jokesBlue,
+                    backgroundColor: .jokesBlueLight
                 )
             }
         }
@@ -211,36 +215,35 @@ private struct StatCard: View {
     let icon: String
     let value: String
     let label: String
-    let gradientColors: [Color]
+    let tint: Color
+    let backgroundColor: Color
 
     var body: some View {
         VStack(spacing: 8) {
             Image(systemName: icon)
                 .font(.system(size: 22))
-                .foregroundStyle(.white)
+                .foregroundStyle(tint)
 
             Text(value)
                 .font(.system(size: 28, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
+                .foregroundStyle(Color.darkText)
 
             Text(label)
                 .font(.caption2.weight(.medium))
-                .foregroundStyle(.white.opacity(0.85))
+                .foregroundStyle(Color.lightText)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 18)
         .padding(.horizontal, 8)
-        .background(
-            LinearGradient(
-                colors: gradientColors,
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
+        .background(backgroundColor)
         .clipShape(RoundedRectangle(cornerRadius: 16))
-        .shadow(color: gradientColors[0].opacity(0.3), radius: 6, y: 3)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(tint.opacity(0.25), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.05), radius: 6, y: 3)
     }
 }
 

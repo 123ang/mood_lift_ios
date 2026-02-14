@@ -1,7 +1,12 @@
 import SwiftUI
 
 extension Color {
-    // Category colors
+    // MARK: - Brand (matches MoodLift icon: soft coral, pastels)
+    static let primaryGradientStart = Color(hex: "#ff6b6b")
+    static let primaryGradientEnd = Color(hex: "#ee5a24")
+    static let brandPrimary = Color(hex: "#ff6b6b")
+
+    // Category colors (pastel, icon-aligned)
     static let encouragementPink = Color(hex: "#ff6b6b")
     static let encouragementPinkLight = Color(hex: "#ffebea")
     static let inspirationYellow = Color(hex: "#ffd93d")
@@ -10,9 +15,9 @@ extension Color {
     static let factsGreenLight = Color(hex: "#e8faf8")
     static let jokesBlue = Color(hex: "#45b7d1")
     static let jokesBlueLight = Color(hex: "#e6f4f9")
-    
-    // UI Colors
-    static let appBackground = Color(hex: "#fff5f5")
+
+    // App-wide surfaces (consistent across all 4 tabs)
+    static let appBackground = Color(hex: "#f5f0ef")
     static let cardBackground = Color.white
     static let darkText = Color(hex: "#333333")
     static let lightText = Color(hex: "#666666")
@@ -21,10 +26,6 @@ extension Color {
     static let successGreen = Color(hex: "#2ecc71")
     static let warningOrange = Color(hex: "#f39c12")
     static let errorRed = Color(hex: "#e74c3c")
-    
-    // Gradient pairs
-    static let primaryGradientStart = Color(hex: "#ff6b6b")
-    static let primaryGradientEnd = Color(hex: "#ee5a24")
     
     init(hex: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
@@ -73,6 +74,16 @@ enum ContentCategory: String, CaseIterable {
         case .inspiration: return "star.fill"
         case .facts: return "brain.head.profile"
         case .jokes: return "face.smiling.fill"
+        }
+    }
+
+    /// Asset catalog name for the custom category icon (used on home cards, submit, saved).
+    var imageAssetName: String {
+        switch self {
+        case .encouragement: return "EncouragementIcon"
+        case .inspiration: return "InspirationIcon"
+        case .facts: return "FunFactIcon"
+        case .jokes: return "JokeIcon"
         }
     }
     

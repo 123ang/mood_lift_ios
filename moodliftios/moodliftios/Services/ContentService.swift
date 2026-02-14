@@ -5,23 +5,19 @@ class ContentService {
     
     func getContent(category: String, page: Int = 1, limit: Int = 20, sort: String = "newest") async throws -> [ContentItem] {
         let params = ["page": "\(page)", "limit": "\(limit)", "sort": sort]
-        let response: ContentListResponse = try await APIService.shared.request(
-            endpoint: "/content/\(category)",
-            queryParams: params
-        )
+        let data = try await APIService.shared.requestData(endpoint: "/content/\(category)", queryParams: params)
+        let response = try APIDecoder.decode(ContentListResponse.self, from: data)
         return response.data
     }
     
     func getDailyContent(category: String) async throws -> [DailyContentItem] {
-        return try await APIService.shared.request(endpoint: "/content/\(category)/daily")
+        let data = try await APIService.shared.requestData(endpoint: "/content/\(category)/daily")
+        return try APIDecoder.decode([DailyContentItem].self, from: data)
     }
     
     func submitContent(_ submission: ContentSubmission) async throws -> ContentItem {
-        return try await APIService.shared.request(
-            endpoint: "/content/submit",
-            method: "POST",
-            body: submission
-        )
+        let data = try await APIService.shared.requestData(endpoint: "/content/submit", method: "POST", body: submission)
+        return try APIDecoder.decode(ContentItem.self, from: data)
     }
     
     func voteOnContent(contentId: String, voteType: String) async throws -> ContentItem {
@@ -31,33 +27,33 @@ class ContentService {
                 case voteType = "vote_type"
             }
         }
-        return try await APIService.shared.request(
+        let data = try await APIService.shared.requestData(
             endpoint: "/content/\(contentId)/vote",
             method: "POST",
             body: VoteBody(voteType: voteType)
         )
+        return try APIDecoder.decode(ContentItem.self, from: data)
     }
     
     func reportContent(contentId: String, reason: String) async throws {
         struct ReportBody: Codable {
             let reason: String
         }
-        let _: EmptyResponse = try await APIService.shared.request(
+        let data = try await APIService.shared.requestData(
             endpoint: "/content/\(contentId)/report",
             method: "POST",
             body: ReportBody(reason: reason)
         )
+        _ = try APIDecoder.decode(EmptyResponse.self, from: data)
     }
     
     func unlockContent(contentId: String) async throws -> UnlockResponse {
-        return try await APIService.shared.request(
-            endpoint: "/content/\(contentId)/unlock",
-            method: "POST"
-        )
+        let data = try await APIService.shared.requestData(endpoint: "/content/\(contentId)/unlock", method: "POST")
+        return try APIDecoder.decode(UnlockResponse.self, from: data)
     }
 }
 
-struct ContentListResponse: Codable {
+struct ContentListResponse: Codable, @unchecked Sendable {
     let data: [ContentItem]
     let total: Int
     let page: Int
@@ -69,7 +65,7 @@ struct ContentListResponse: Codable {
     }
 }
 
-struct UnlockResponse: Codable {
+struct UnlockResponse: Codable, @unchecked Sendable {
     let message: String
     let pointsSpent: Int
     let remainingBalance: Int

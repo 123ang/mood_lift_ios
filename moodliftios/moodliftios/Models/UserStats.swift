@@ -1,6 +1,6 @@
 import Foundation
 
-struct UserStats: Codable {
+struct UserStats: Codable, Sendable {
     let pointsBalance: Int
     let currentStreak: Int
     let totalCheckins: Int

@@ -1,6 +1,6 @@
 import Foundation
 
-struct ContentItem: Codable, Identifiable {
+struct ContentItem: Codable, Identifiable, @unchecked Sendable {
     let id: String
     var contentText: String?
     var question: String?
@@ -86,7 +86,7 @@ struct ContentSubmission: Codable {
     }
 }
 
-struct DailyContentItem: Codable, Identifiable {
+struct DailyContentItem: Codable, Identifiable, @unchecked Sendable {
     let id: String
     let contentId: String
     let category: String

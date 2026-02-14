@@ -208,6 +208,22 @@ struct LoginView: View {
         .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 
+    // MARK: - Helpers
+
+    private func connectionErrorMessage(for error: Error) -> String {
+        let ns = error as NSError
+        if ns.domain == NSURLErrorDomain {
+            switch ns.code {
+            case NSURLErrorCannotConnectToHost, NSURLErrorNetworkConnectionLost,
+                 NSURLErrorTimedOut, NSURLErrorNotConnectedToInternet:
+                return "Cannot connect to server. Is the backend running at http://localhost:3000?"
+            default:
+                break
+            }
+        }
+        return "Something went wrong. Please try again."
+    }
+
     // MARK: - Actions
 
     private func handleLogin() {
@@ -227,7 +243,7 @@ struct LoginView: View {
                 }
             } catch {
                 await MainActor.run {
-                    errorMessage = "Something went wrong. Please try again."
+                    errorMessage = connectionErrorMessage(for: error)
                     shakeError.toggle()
                     isLoading = false
                 }

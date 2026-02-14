@@ -41,8 +41,7 @@ class ContentViewModel {
         defer { isUnlocking = false }
         
         do {
-            let response = try await ContentService.shared.unlockContent(contentId: contentId)
-            // Update local state
+            _ = try await ContentService.shared.unlockContent(contentId: contentId)
             if let index = dailyContent.firstIndex(where: { $0.contentId == contentId }) {
                 dailyContent[index].isUnlocked = true
             }
@@ -54,10 +53,9 @@ class ContentViewModel {
     
     func voteOnContent(contentId: String, voteType: String) async {
         do {
-            let updated = try await ContentService.shared.voteOnContent(contentId: contentId, voteType: voteType)
-            // Update local state
-            if let index = dailyContent.firstIndex(where: { $0.content?.id == contentId }) {
-                // We'd need to update the nested content - simplified here
+            _ = try await ContentService.shared.voteOnContent(contentId: contentId, voteType: voteType)
+            if dailyContent.contains(where: { $0.content?.id == contentId }) {
+                // State refresh handled by reload or parent
             }
         } catch {
             errorMessage = error.localizedDescription

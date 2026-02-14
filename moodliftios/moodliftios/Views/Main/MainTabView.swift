@@ -37,7 +37,9 @@ struct MainTabView: View {
                 Label("Settings", systemImage: "gearshape.fill")
             }
         }
-        .tint(.encouragementPink)
+        .tint(.brandPrimary)
+        .toolbarBackground(Color.appBackground, for: .tabBar)
+        .toolbarBackground(.visible, for: .tabBar)
     }
 }
 
