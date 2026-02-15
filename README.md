@@ -124,10 +124,9 @@ If you see **"Something went wrong"** on sign up or login, the app likely cannot
 For TestFlight or App Store, devices cannot use `localhost`. You must:
 
 1. **Deploy the MoodLift backend** (`mood_lift_web`) to a public host (e.g. [Railway](https://railway.app), [Render](https://render.com), [Heroku](https://heroku.com), or your own server) with a database (e.g. hosted PostgreSQL).
-2. In **`Utilities/Constants.swift`**, find the `#else` branch (Release) and replace `YOUR_PRODUCTION_API_URL` with your deployed API host, e.g.:
-   - If your API is at `https://moodlift-api.railway.app`, set:  
-     `static let apiBaseURL = "https://moodlift-api.railway.app/api"`
-   - Do **not** ship with the literal `YOUR_PRODUCTION_API_URL` or TestFlight testers will see "Cannot connect to server."
+2. In **`moodliftios/Utilities/Constants.swift`**, find the `#else` branch (Release). The app is currently set to use **`https://moodlift.suntzutechnologies.com/api`** for production/TestFlight. To use a different host, set e.g.  
+   `static let apiBaseURL = "https://your-api-host.com/api"`
+   Do **not** ship with a placeholder or TestFlight testers will see "Cannot connect to server."
 
 ### 5. Configure Notifications
 

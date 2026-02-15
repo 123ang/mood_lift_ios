@@ -163,7 +163,7 @@ struct LoginView: View {
             .padding(.top, 4)
         }
         .padding(24)
-        .background(.white)
+        .background(Color.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 24))
         .shadow(color: .black.opacity(0.1), radius: 20, y: 10)
     }

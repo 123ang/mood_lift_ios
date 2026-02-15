@@ -214,7 +214,7 @@ private struct ActivityTransactionCard: View {
                 .clipShape(Capsule())
         }
         .padding(16)
-        .background(.white)
+        .background(Color.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .shadow(color: .black.opacity(0.06), radius: 6, y: 2)
     }

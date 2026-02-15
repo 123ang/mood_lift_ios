@@ -17,23 +17,20 @@ struct SettingsView: View {
 
     var body: some View {
         ZStack {
-            Color.appBackground
-                .ignoresSafeArea()
-
+            Color.appBackground.ignoresSafeArea()
             VStack(spacing: 0) {
                 headerBar
-
                 ScrollView(showsIndicators: false) {
-                    VStack(spacing: 16) {
-                        notificationsSection
-                        accountSection
-                        supportSection
-                        aboutSection
-                        signOutSection
+                    VStack(spacing: Theme.spaceL) {
+                        notificationsCard
+                        accountCard
+                        supportCard
+                        aboutCard
+                        signOutButton
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 8)
-                    .padding(.bottom, 40)
+                    .padding(.horizontal, Theme.spaceM)
+                    .padding(.top, Theme.spaceS)
+                    .padding(.bottom, Theme.spaceXXL)
                 }
             }
         }
@@ -42,135 +39,104 @@ struct SettingsView: View {
             viewModel.loadSettings()
             updateReminderDate()
         }
-        .sheet(isPresented: $viewModel.showChangePassword) {
-            changePasswordSheet
-        }
-        .sheet(isPresented: $showPrivacyPolicy) {
-            legalSheet(title: "Privacy Policy", content: privacyPolicyText)
-        }
-        .sheet(isPresented: $showTermsOfService) {
-            legalSheet(title: "Terms of Service", content: termsOfServiceText)
-        }
-        .alert("Sign Out", isPresented: $showSignOutAlert) {
+        .sheet(isPresented: $viewModel.showChangePassword) { changePasswordSheet }
+        .sheet(isPresented: $showPrivacyPolicy) { legalSheet(title: "Privacy Policy", content: privacyPolicyText) }
+        .sheet(isPresented: $showTermsOfService) { legalSheet(title: "Terms of Service", content: termsOfServiceText) }
+        .alert("Sign out?", isPresented: $showSignOutAlert) {
             Button("Cancel", role: .cancel) {}
-            Button("Sign Out", role: .destructive) {
-                Task { await viewModel.signOut() }
-            }
+            Button("Sign out", role: .destructive) { Task { await viewModel.signOut() } }
         } message: {
-            Text("Are you sure you want to sign out?")
+            Text("You can sign back in anytime.")
         }
-        .alert("Error", isPresented: .init(
-            get: { viewModel.errorMessage != nil },
-            set: { if !$0 { viewModel.errorMessage = nil } }
-        )) {
+        .alert("Error", isPresented: .init(get: { viewModel.errorMessage != nil }, set: { if !$0 { viewModel.errorMessage = nil } })) {
             Button("OK", role: .cancel) {}
         } message: {
             Text(viewModel.errorMessage ?? "")
         }
-        .alert("Success", isPresented: .init(
-            get: { viewModel.successMessage != nil },
-            set: { if !$0 { viewModel.successMessage = nil } }
-        )) {
+        .alert("Done", isPresented: .init(get: { viewModel.successMessage != nil }, set: { if !$0 { viewModel.successMessage = nil } })) {
             Button("OK", role: .cancel) {}
         } message: {
             Text(viewModel.successMessage ?? "")
         }
     }
 
-    // MARK: - Header Bar
-
+    // MARK: - Header (comfort, not config)
     private var headerBar: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: Theme.spaceM) {
             Image(systemName: "gearshape.fill")
-                .font(.system(size: 22))
+                .font(.system(size: 20, weight: .medium, design: .rounded))
+                .foregroundStyle(.white.opacity(0.95))
+            Text("Preferences")
+                .font(.themeTitleSmall())
                 .foregroundStyle(.white)
-
-            Text("Settings")
-                .font(.system(size: 22, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
-
             Spacer()
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 16)
+        .padding(.horizontal, Theme.spaceM)
+        .padding(.vertical, Theme.spaceM)
         .background(headerGradient)
     }
 
-    // MARK: - Notifications Section
-
-    private var notificationsSection: some View {
-        VStack(spacing: 0) {
-            sectionHeader(icon: "bell.fill", title: "Notifications")
-
+    // MARK: - Notifications & reminders (grouped soft card)
+    private var notificationsCard: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            SectionHeader(icon: "bell.fill", title: "Notifications & reminders", subtitle: "When to nudge you")
             VStack(spacing: 0) {
                 HStack {
                     Image(systemName: "bell.badge.fill")
                         .font(.system(size: 16))
                         .foregroundStyle(Color.brandPrimary)
                         .frame(width: 28)
-
-                    Text("Push Notifications")
-                        .font(.subheadline.weight(.medium))
+                    Text("Push notifications")
+                        .font(.themeBodyMedium())
                         .foregroundStyle(Color.darkText)
-
                     Spacer()
-
                     Toggle("", isOn: Binding(
                         get: { viewModel.notificationsEnabled },
-                        set: { _ in
-                            Task { await viewModel.toggleNotifications() }
-                        }
+                        set: { _ in Task { await viewModel.toggleNotifications() } }
                     ))
-                    .tint(.successGreen)
+                    .tint(Color.successSoft)
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 14)
+                .padding(.horizontal, Theme.spaceM)
+                .padding(.vertical, Theme.spaceM)
 
                 if viewModel.notificationsEnabled {
-                    Divider()
+                    Rectangle()
+                        .fill(Color.borderColor.opacity(0.12))
+                        .frame(height: 1)
                         .padding(.leading, 56)
-
                     HStack {
                         Image(systemName: "clock.fill")
                             .font(.system(size: 16))
                             .foregroundStyle(Color.brandPrimary)
                             .frame(width: 28)
-
-                        Text("Daily Reminder")
-                            .font(.subheadline.weight(.medium))
+                        Text("Daily reminder")
+                            .font(.themeBodyMedium())
                             .foregroundStyle(Color.darkText)
-
                         Spacer()
-
-                        DatePicker(
-                            "",
-                            selection: $reminderDate,
-                            displayedComponents: .hourAndMinute
-                        )
-                        .labelsHidden()
-                        .onChange(of: reminderDate) { _, newValue in
-                            let calendar = Calendar.current
-                            viewModel.reminderHour = calendar.component(.hour, from: newValue)
-                            viewModel.reminderMinute = calendar.component(.minute, from: newValue)
-                            Task { await viewModel.updateReminderTime() }
-                        }
+                        DatePicker("", selection: $reminderDate, displayedComponents: .hourAndMinute)
+                            .labelsHidden()
+                            .onChange(of: reminderDate) { _, newValue in
+                                let cal = Calendar.current
+                                viewModel.reminderHour = cal.component(.hour, from: newValue)
+                                viewModel.reminderMinute = cal.component(.minute, from: newValue)
+                                Task { await viewModel.updateReminderTime() }
+                            }
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
+                    .padding(.horizontal, Theme.spaceM)
+                    .padding(.vertical, Theme.spaceS + 2)
                 }
             }
-            .background(.white)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .shadow(color: .black.opacity(0.06), radius: 6, y: 2)
+            .background(Color.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMedium))
+            .shadow(color: Theme.cardShadow().color, radius: Theme.cardShadow().radius, y: Theme.cardShadow().y)
         }
+        .padding(.top, Theme.spaceM)
     }
 
-    // MARK: - Account Section
-
-    private var accountSection: some View {
-        VStack(spacing: 0) {
-            sectionHeader(icon: "person.fill", title: "Account")
-
+    // MARK: - Account (grouped)
+    private var accountCard: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            SectionHeader(icon: "person.fill", title: "Account")
             Button {
                 viewModel.showChangePassword = true
             } label: {
@@ -179,126 +145,86 @@ struct SettingsView: View {
                         .font(.system(size: 16))
                         .foregroundStyle(Color.brandPrimary)
                         .frame(width: 28)
-
-                    Text("Change Password")
-                        .font(.subheadline.weight(.medium))
+                    Text("Change password")
+                        .font(.themeBodyMedium())
                         .foregroundStyle(Color.darkText)
-
                     Spacer()
-
                     Image(systemName: "chevron.right")
-                        .font(.caption.weight(.semibold))
+                        .font(.caption.weight(.medium))
                         .foregroundStyle(Color.lightText)
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 14)
+                .padding(.horizontal, Theme.spaceM)
+                .padding(.vertical, Theme.spaceM)
             }
             .buttonStyle(.plain)
-            .background(.white)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .shadow(color: .black.opacity(0.06), radius: 6, y: 2)
+            .background(Color.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMedium))
+            .shadow(color: Theme.cardShadow().color, radius: Theme.cardShadow().radius, y: Theme.cardShadow().y)
         }
     }
 
-    // MARK: - Support Section
-
-    private var supportSection: some View {
-        VStack(spacing: 0) {
-            sectionHeader(icon: "questionmark.circle.fill", title: "Support & Legal")
-
+    // MARK: - Support & legal (grouped)
+    private var supportCard: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            SectionHeader(icon: "questionmark.circle.fill", title: "Support & legal")
             VStack(spacing: 0) {
-                Button {
-                    showPrivacyPolicy = true
-                } label: {
-                    settingsRow(icon: "hand.raised.fill", title: "Privacy Policy")
-                }
+                Button { showPrivacyPolicy = true } label: { settingsRow(icon: "hand.raised.fill", title: "Privacy Policy") }
                 .buttonStyle(.plain)
-
-                Divider()
+                Rectangle()
+                    .fill(Color.borderColor.opacity(0.12))
+                    .frame(height: 1)
                     .padding(.leading, 56)
-
-                Button {
-                    showTermsOfService = true
-                } label: {
-                    settingsRow(icon: "doc.text.fill", title: "Terms of Service")
-                }
+                Button { showTermsOfService = true } label: { settingsRow(icon: "doc.text.fill", title: "Terms of Service") }
                 .buttonStyle(.plain)
             }
-            .background(.white)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .shadow(color: .black.opacity(0.06), radius: 6, y: 2)
+            .background(Color.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMedium))
+            .shadow(color: Theme.cardShadow().color, radius: Theme.cardShadow().radius, y: Theme.cardShadow().y)
         }
     }
 
-    // MARK: - About Section
-
-    private var aboutSection: some View {
-        VStack(spacing: 0) {
-            sectionHeader(icon: "info.circle.fill", title: "About")
-
+    // MARK: - About
+    private var aboutCard: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            SectionHeader(icon: "heart.fill", title: "About")
             HStack {
                 Image(systemName: "heart.fill")
                     .font(.system(size: 16))
                     .foregroundStyle(Color.encouragementPink)
                     .frame(width: 28)
-
-                Text("App Version")
-                    .font(.subheadline.weight(.medium))
+                Text("App version")
+                    .font(.themeBodyMedium())
                     .foregroundStyle(Color.darkText)
-
                 Spacer()
-
                 Text("1.0.0")
-                    .font(.subheadline)
+                    .font(.themeCallout())
                     .foregroundStyle(Color.lightText)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-            .background(.white)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .shadow(color: .black.opacity(0.06), radius: 6, y: 2)
+            .padding(.horizontal, Theme.spaceM)
+            .padding(.vertical, Theme.spaceM)
+            .background(Color.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMedium))
+            .shadow(color: Theme.cardShadow().color, radius: Theme.cardShadow().radius, y: Theme.cardShadow().y)
         }
     }
 
-    // MARK: - Sign Out Section
-
-    private var signOutSection: some View {
-        Button {
-            showSignOutAlert = true
-        } label: {
-            HStack(spacing: 10) {
+    // MARK: - Sign out (soft primary style)
+    private var signOutButton: some View {
+        Button { showSignOutAlert = true } label: {
+            HStack(spacing: Theme.spaceS) {
                 Image(systemName: "rectangle.portrait.and.arrow.right")
-                    .font(.system(size: 16, weight: .semibold))
-                Text("Sign Out")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 16, weight: .medium, design: .rounded))
+                Text("Sign out")
+                    .font(.themeHeadline())
             }
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
+            .padding(.vertical, Theme.spaceM)
             .background(headerGradient)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .shadow(color: Color.primaryGradientStart.opacity(0.3), radius: 8, y: 4)
+            .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMedium))
+            .shadow(color: Color.primarySoft.opacity(0.2), radius: 6, y: 3)
         }
-        .padding(.top, 8)
-    }
-
-    // MARK: - Reusable Components
-
-    private func sectionHeader(icon: String, title: String) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(Color.brandPrimary)
-            Text(title)
-                .font(.caption.weight(.bold))
-                .foregroundStyle(Color.darkText)
-                .textCase(.uppercase)
-                .tracking(0.5)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 4)
-        .padding(.bottom, 8)
-        .padding(.top, 12)
+        .padding(.top, Theme.spaceS)
     }
 
     private func settingsRow(icon: String, title: String) -> some View {
@@ -307,81 +233,64 @@ struct SettingsView: View {
                 .font(.system(size: 16))
                 .foregroundStyle(Color.brandPrimary)
                 .frame(width: 28)
-
             Text(title)
-                .font(.subheadline.weight(.medium))
+                .font(.themeBodyMedium())
                 .foregroundStyle(Color.darkText)
-
             Spacer()
-
             Image(systemName: "chevron.right")
-                .font(.caption.weight(.semibold))
+                .font(.caption.weight(.medium))
                 .foregroundStyle(Color.lightText)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
+        .padding(.horizontal, Theme.spaceM)
+        .padding(.vertical, Theme.spaceM)
     }
 
-    // MARK: - Change Password Sheet
-
+    // MARK: - Change Password Sheet (soft theme)
     private var changePasswordSheet: some View {
         NavigationStack {
-            VStack(spacing: 20) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Current Password")
-                        .font(.caption.weight(.semibold))
+            VStack(spacing: Theme.spaceL) {
+                VStack(alignment: .leading, spacing: Theme.spaceXS) {
+                    Text("Current password")
+                        .font(.themeCaptionMedium())
                         .foregroundStyle(Color.lightText)
                     SecureField("Enter current password", text: $viewModel.currentPassword)
                         .textContentType(.password)
-                        .padding(14)
+                        .padding(Theme.spaceM)
                         .background(Color.appBackground)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.borderColor.opacity(0.15), lineWidth: 1)
-                        )
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.radiusSmall))
+                        .overlay(RoundedRectangle(cornerRadius: Theme.radiusSmall).stroke(Color.borderColor.opacity(0.15), lineWidth: 1))
                 }
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("New Password")
-                        .font(.caption.weight(.semibold))
+                VStack(alignment: .leading, spacing: Theme.spaceXS) {
+                    Text("New password")
+                        .font(.themeCaptionMedium())
                         .foregroundStyle(Color.lightText)
                     SecureField("Enter new password", text: $viewModel.newPassword)
                         .textContentType(.newPassword)
-                        .padding(14)
+                        .padding(Theme.spaceM)
                         .background(Color.appBackground)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.borderColor.opacity(0.15), lineWidth: 1)
-                        )
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.radiusSmall))
+                        .overlay(RoundedRectangle(cornerRadius: Theme.radiusSmall).stroke(Color.borderColor.opacity(0.15), lineWidth: 1))
                 }
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Confirm Password")
-                        .font(.caption.weight(.semibold))
+                VStack(alignment: .leading, spacing: Theme.spaceXS) {
+                    Text("Confirm new password")
+                        .font(.themeCaptionMedium())
                         .foregroundStyle(Color.lightText)
                     SecureField("Confirm new password", text: $viewModel.confirmPassword)
                         .textContentType(.newPassword)
-                        .padding(14)
+                        .padding(Theme.spaceM)
                         .background(Color.appBackground)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.borderColor.opacity(0.15), lineWidth: 1)
-                        )
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.radiusSmall))
+                        .overlay(RoundedRectangle(cornerRadius: Theme.radiusSmall).stroke(Color.borderColor.opacity(0.15), lineWidth: 1))
                 }
-
                 Button {
                     Task { await viewModel.changePassword() }
                 } label: {
                     Group {
                         if viewModel.isLoading {
-                            ProgressView()
-                                .tint(.white)
+                            ProgressView().tint(.white)
                         } else {
-                            Text("Save Password")
-                                .font(.system(size: 16, weight: .semibold))
+                            Text("Save password")
+                                .font(.themeHeadline())
                         }
                     }
                     .frame(maxWidth: .infinity)
@@ -389,21 +298,20 @@ struct SettingsView: View {
                     .foregroundStyle(.white)
                     .background(
                         LinearGradient(
-                            colors: [Color(hex: "#667eea"), Color(hex: "#764ba2")],
+                            colors: [Color.primaryGradientStart, Color.primaryGradientEnd],
                             startPoint: .leading,
                             endPoint: .trailing
                         )
                     )
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-                    .shadow(color: Color(hex: "#667eea").opacity(0.3), radius: 8, y: 4)
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMedium))
+                    .shadow(color: Color.primarySoft.opacity(0.2), radius: 6, y: 3)
                 }
                 .disabled(viewModel.isLoading || viewModel.currentPassword.isEmpty || viewModel.newPassword.isEmpty || viewModel.confirmPassword.isEmpty)
-                .opacity(viewModel.currentPassword.isEmpty || viewModel.newPassword.isEmpty || viewModel.confirmPassword.isEmpty ? 0.6 : 1.0)
-
+                .opacity(viewModel.currentPassword.isEmpty || viewModel.newPassword.isEmpty || viewModel.confirmPassword.isEmpty ? 0.6 : 1)
                 Spacer()
             }
-            .padding(24)
-            .navigationTitle("Change Password")
+            .padding(Theme.spaceL)
+            .navigationTitle("Change password")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -413,20 +321,19 @@ struct SettingsView: View {
                         viewModel.newPassword = ""
                         viewModel.confirmPassword = ""
                     }
+                    .foregroundStyle(Color.brandPrimary)
                 }
             }
         }
     }
 
-    // MARK: - Legal Sheet
-
     private func legalSheet(title: String, content: String) -> some View {
         NavigationStack {
             ScrollView {
                 Text(content)
-                    .font(.subheadline)
+                    .font(.themeCallout())
                     .foregroundStyle(Color.darkText)
-                    .padding(24)
+                    .padding(Theme.spaceL)
             }
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
@@ -436,12 +343,11 @@ struct SettingsView: View {
                         showPrivacyPolicy = false
                         showTermsOfService = false
                     }
+                    .foregroundStyle(Color.brandPrimary)
                 }
             }
         }
     }
-
-    // MARK: - Helpers
 
     private func updateReminderDate() {
         var components = DateComponents()

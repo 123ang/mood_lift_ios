@@ -111,7 +111,7 @@ struct SubmitContentView: View {
                     .buttonStyle(.plain)
                 }
             }
-            .background(Color.white)
+            .background(Color.cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: 14))
             .overlay(
                 RoundedRectangle(cornerRadius: 14)
@@ -203,7 +203,7 @@ struct SubmitContentView: View {
                     .frame(minHeight: 140)
                     .padding(12)
                     .scrollContentBackground(.hidden)
-                    .background(Color.white)
+                    .background(Color.cardBackground)
                     .clipShape(RoundedRectangle(cornerRadius: 14))
                     .overlay(
                         RoundedRectangle(cornerRadius: 14)
@@ -305,7 +305,7 @@ struct SubmitContentView: View {
                     .frame(minHeight: 100)
                     .padding(12)
                     .scrollContentBackground(.hidden)
-                    .background(Color.white)
+                    .background(Color.cardBackground)
                     .clipShape(RoundedRectangle(cornerRadius: 14))
                     .overlay(
                         RoundedRectangle(cornerRadius: 14)
@@ -336,7 +336,7 @@ struct SubmitContentView: View {
             TextField(placeholder, text: text)
                 .font(.subheadline)
                 .padding(14)
-                .background(Color.white)
+                .background(Color.cardBackground)
                 .clipShape(RoundedRectangle(cornerRadius: 14))
                 .overlay(
                     RoundedRectangle(cornerRadius: 14)

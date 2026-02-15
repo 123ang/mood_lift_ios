@@ -34,11 +34,7 @@ struct DailyCheckinView: View {
         }
         .background(
             LinearGradient(
-                colors: [
-                    Color(hex: "#2ecc71"),
-                    Color(hex: "#27ae60"),
-                    Color(hex: "#1abc9c")
-                ],
+                colors: [Color.supportMint, Color.successSoft, Color.factsGreen],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
@@ -97,7 +93,7 @@ struct DailyCheckinView: View {
                 .padding(.vertical, 7)
                 .background(
                     Capsule()
-                        .fill(Color.accentYellow)
+                        .fill(Color.accentWarm)
                         .overlay(
                             Capsule()
                                 .stroke(Color.borderColor, lineWidth: 2)
