@@ -216,7 +216,11 @@ struct LoginView: View {
             switch ns.code {
             case NSURLErrorCannotConnectToHost, NSURLErrorNetworkConnectionLost,
                  NSURLErrorTimedOut, NSURLErrorNotConnectedToInternet:
-                return "Cannot connect to server. Is the backend running at http://localhost:3000?"
+                #if DEBUG
+                return "Cannot connect to server. Is the backend running at \(Constants.apiBaseURL.replacingOccurrences(of: "/api", with: ""))?"
+                #else
+                return "Cannot connect to server. Please check your internet connection and try again."
+                #endif
             default:
                 break
             }

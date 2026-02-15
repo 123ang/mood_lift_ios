@@ -89,16 +89,10 @@ MoodLift/
 
 ### 3. Configure API URL
 
-Edit `Services/APIService.swift` and update the `baseURL`:
+The app uses **`Utilities/Constants.swift`** for the API base URL:
 
-```swift
-private let baseURL = "https://your-api-domain.com/api"
-```
-
-For local development, use:
-```swift
-private let baseURL = "http://localhost:3000/api"
-```
+- **Debug builds** (Xcode run, simulator): use `http://localhost:3000/api` so you can test against your local backend.
+- **Release builds** (TestFlight, App Store): use your **deployed** backend URL. Before archiving for TestFlight or release, edit `Constants.swift` and replace `YOUR_PRODUCTION_API_URL` with your real host (e.g. `your-app.herokuapp.com` or `api.yourapp.com`), so the full value is like `https://your-app.herokuapp.com/api`.
 
 ### 4. Local development – run the backend first
 
@@ -124,6 +118,16 @@ To test sign up, login, and all API features locally:
 4. **Run the iOS app** from Xcode (⌘R) with the simulator. The app uses `http://localhost:3000/api`; the simulator uses your Mac’s localhost, so sign up and login will hit this backend.
 
 If you see **"Something went wrong"** on sign up or login, the app likely cannot reach the API: ensure the backend is running on port 3000 and the database is set up.
+
+#### Production / TestFlight
+
+For TestFlight or App Store, devices cannot use `localhost`. You must:
+
+1. **Deploy the MoodLift backend** (`mood_lift_web`) to a public host (e.g. [Railway](https://railway.app), [Render](https://render.com), [Heroku](https://heroku.com), or your own server) with a database (e.g. hosted PostgreSQL).
+2. In **`Utilities/Constants.swift`**, find the `#else` branch (Release) and replace `YOUR_PRODUCTION_API_URL` with your deployed API host, e.g.:
+   - If your API is at `https://moodlift-api.railway.app`, set:  
+     `static let apiBaseURL = "https://moodlift-api.railway.app/api"`
+   - Do **not** ship with the literal `YOUR_PRODUCTION_API_URL` or TestFlight testers will see "Cannot connect to server."
 
 ### 5. Configure Notifications
 
