@@ -11,9 +11,9 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		D0CA1C8E2F3E86EC00E63649 /* moodliftios */ = {
+		D0CA1C8E2F3E86EC00E63649 /* MoodLift */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = moodliftios;
+			path = MoodLift;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -32,7 +32,7 @@
 		D0CA1C832F3E86EC00E63649 = {
 			isa = PBXGroup;
 			children = (
-				D0CA1C8E2F3E86EC00E63649 /* moodliftios */,
+				D0CA1C8E2F3E86EC00E63649 /* MoodLift */,
 				D0CA1C8D2F3E86EC00E63649 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -61,7 +61,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				D0CA1C8E2F3E86EC00E63649 /* moodliftios */,
+				D0CA1C8E2F3E86EC00E63649 /* MoodLift */,
 			);
 			name = moodliftios;
 			packageProductDependencies = (

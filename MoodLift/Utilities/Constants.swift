@@ -4,12 +4,11 @@ enum Constants {
     static let appName = "MoodLift"
     static let appVersion = "1.0.0"
 
-    /// API base URL. Debug = local backend; Release = deployed backend (required for TestFlight / App Store).
+    /// API base URL. Debug = local backend; Release = deployed backend.
     #if DEBUG
     static let apiBaseURL = "http://localhost:3000/api"
     #else
-    /// ⚠️ Replace with your real deployed backend URL before shipping (e.g. https://your-app.herokuapp.com/api)
-    static let apiBaseURL = "https://YOUR_PRODUCTION_API_URL/api"
+    static let apiBaseURL = "https://moodlift.suntzutechnologies.com/api"
     #endif
     
     // Points
