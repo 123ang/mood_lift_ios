@@ -33,7 +33,7 @@ enum APIDecoder {
 actor APIService {
     static let shared = APIService()
     
-    private let baseURL = "http://localhost:3000/api"
+    private let baseURL = Constants.apiBaseURL
     private var authToken: String?
     
     private let encoder: JSONEncoder = {
