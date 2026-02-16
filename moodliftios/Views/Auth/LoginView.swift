@@ -50,16 +50,16 @@ struct LoginView: View {
         VStack(spacing: 12) {
             Image(systemName: "heart.fill")
                 .font(.system(size: 52))
-                .foregroundStyle(.white)
-                .shadow(color: .black.opacity(0.12), radius: 6, y: 3)
+                .foregroundStyle(Color.darkText.opacity(0.9))
+                .shadow(color: .black.opacity(0.08), radius: 6, y: 3)
 
             Text("MoodLift")
                 .font(.system(size: 34, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
+                .foregroundStyle(Color.darkText)
 
             Text("Welcome back!")
                 .font(.system(size: 17, weight: .medium))
-                .foregroundStyle(.white.opacity(0.9))
+                .foregroundStyle(Color.darkText.opacity(0.85))
         }
         .padding(.bottom, 8)
     }
@@ -89,10 +89,10 @@ struct LoginView: View {
                 )
             }
 
-            // Email field
+            // Email field (dark text on light background)
             HStack(spacing: 12) {
                 Image(systemName: "envelope.fill")
-                    .foregroundStyle(Color.lightText)
+                    .foregroundStyle(Color.darkText)
                     .frame(width: 20)
 
                 TextField("Email address", text: $email)
@@ -100,6 +100,8 @@ struct LoginView: View {
                     .keyboardType(.emailAddress)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
+                    .foregroundStyle(Color.darkText)
+                    .tint(Color.brandPrimary)
             }
             .padding(16)
             .background(Color.appBackground)
@@ -108,7 +110,7 @@ struct LoginView: View {
             // Password field
             HStack(spacing: 12) {
                 Image(systemName: "lock.fill")
-                    .foregroundStyle(Color.lightText)
+                    .foregroundStyle(Color.darkText)
                     .frame(width: 20)
 
                 Group {
@@ -121,12 +123,14 @@ struct LoginView: View {
                 .textContentType(.password)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
+                .foregroundStyle(Color.darkText)
+                .tint(Color.brandPrimary)
 
                 Button {
                     showPassword.toggle()
                 } label: {
                     Image(systemName: showPassword ? "eye.slash.fill" : "eye.fill")
-                        .foregroundStyle(Color.lightText)
+                        .foregroundStyle(Color.darkText)
                         .contentTransition(.symbolEffect(.replace))
                 }
             }
@@ -134,12 +138,12 @@ struct LoginView: View {
             .background(Color.appBackground)
             .clipShape(RoundedRectangle(cornerRadius: 14))
 
-            // Sign In button
+            // Sign In button (dark text on light gradient for contrast)
             Button(action: handleLogin) {
                 Group {
                     if isLoading {
                         ProgressView()
-                            .tint(.white)
+                            .tint(Color.darkText)
                     } else {
                         Text("Sign In")
                             .font(.system(size: 17, weight: .semibold))
@@ -147,7 +151,7 @@ struct LoginView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .frame(height: 52)
-                .foregroundStyle(.white)
+                .foregroundStyle(Color.darkText)
                 .background(
                     LinearGradient(
                         colors: [.primaryGradientStart, .primaryGradientEnd],
@@ -176,10 +180,10 @@ struct LoginView: View {
         } label: {
             HStack(spacing: 4) {
                 Text("Don't have an account?")
-                    .foregroundStyle(.white.opacity(0.85))
+                    .foregroundStyle(Color.darkText.opacity(0.9))
                 Text("Sign Up")
                     .fontWeight(.bold)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color.darkText)
             }
             .font(.subheadline)
         }
@@ -196,10 +200,10 @@ struct LoginView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Daily Check-ins")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color.darkText)
                 Text("Earn points & track your mood every day!")
                     .font(.caption)
-                    .foregroundStyle(.white.opacity(0.8))
+                    .foregroundStyle(Color.darkText.opacity(0.85))
             }
         }
         .padding(16)

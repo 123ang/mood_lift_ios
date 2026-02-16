@@ -67,9 +67,9 @@ struct SignupView: View {
                 } label: {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Color.darkText)
                         .padding(10)
-                        .background(.white.opacity(0.2))
+                        .background(Color.white.opacity(0.7))
                         .clipShape(Circle())
                 }
             }
@@ -82,16 +82,16 @@ struct SignupView: View {
         VStack(spacing: 12) {
             Image(systemName: "heart.fill")
                 .font(.system(size: 48))
-                .foregroundStyle(.white)
-                .shadow(color: .black.opacity(0.12), radius: 6, y: 3)
+                .foregroundStyle(Color.darkText.opacity(0.9))
+                .shadow(color: .black.opacity(0.08), radius: 6, y: 3)
 
             Text("Create Account")
                 .font(.system(size: 30, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
+                .foregroundStyle(Color.darkText)
 
             Text("Join the MoodLift community")
                 .font(.system(size: 16, weight: .medium))
-                .foregroundStyle(.white.opacity(0.9))
+                .foregroundStyle(Color.darkText.opacity(0.85))
         }
     }
 
@@ -141,16 +141,18 @@ struct SignupView: View {
                 )
             }
 
-            // Username field
+            // Username field (dark text on light background)
             HStack(spacing: 12) {
                 Image(systemName: "person.fill")
-                    .foregroundStyle(Color.lightText)
+                    .foregroundStyle(Color.darkText)
                     .frame(width: 20)
 
                 TextField("Username", text: $username)
                     .textContentType(.username)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
+                    .foregroundStyle(Color.darkText)
+                    .tint(Color.brandPrimary)
             }
             .padding(16)
             .background(Color.appBackground)
@@ -159,7 +161,7 @@ struct SignupView: View {
             // Email field
             HStack(spacing: 12) {
                 Image(systemName: "envelope.fill")
-                    .foregroundStyle(Color.lightText)
+                    .foregroundStyle(Color.darkText)
                     .frame(width: 20)
 
                 TextField("Email address", text: $email)
@@ -167,6 +169,8 @@ struct SignupView: View {
                     .keyboardType(.emailAddress)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
+                    .foregroundStyle(Color.darkText)
+                    .tint(Color.brandPrimary)
             }
             .padding(16)
             .background(Color.appBackground)
@@ -175,7 +179,7 @@ struct SignupView: View {
             // Password field
             HStack(spacing: 12) {
                 Image(systemName: "lock.fill")
-                    .foregroundStyle(Color.lightText)
+                    .foregroundStyle(Color.darkText)
                     .frame(width: 20)
 
                 Group {
@@ -188,12 +192,14 @@ struct SignupView: View {
                 .textContentType(.newPassword)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
+                .foregroundStyle(Color.darkText)
+                .tint(Color.brandPrimary)
 
                 Button {
                     showPassword.toggle()
                 } label: {
                     Image(systemName: showPassword ? "eye.slash.fill" : "eye.fill")
-                        .foregroundStyle(Color.lightText)
+                        .foregroundStyle(Color.darkText)
                         .contentTransition(.symbolEffect(.replace))
                 }
             }
@@ -204,7 +210,7 @@ struct SignupView: View {
             // Confirm password field
             HStack(spacing: 12) {
                 Image(systemName: "lock.shield.fill")
-                    .foregroundStyle(Color.lightText)
+                    .foregroundStyle(Color.darkText)
                     .frame(width: 20)
 
                 Group {
@@ -217,6 +223,8 @@ struct SignupView: View {
                 .textContentType(.newPassword)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
+                .foregroundStyle(Color.darkText)
+                .tint(Color.brandPrimary)
             }
             .padding(16)
             .background(Color.appBackground)
@@ -227,12 +235,12 @@ struct SignupView: View {
                 passwordStrengthView
             }
 
-            // Create Account button
+            // Create Account button (dark text on light gradient for contrast)
             Button(action: handleRegister) {
                 Group {
                     if isLoading {
                         ProgressView()
-                            .tint(.white)
+                            .tint(Color.darkText)
                     } else {
                         Text("Create Account")
                             .font(.system(size: 17, weight: .semibold))
@@ -240,7 +248,7 @@ struct SignupView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .frame(height: 52)
-                .foregroundStyle(.white)
+                .foregroundStyle(Color.darkText)
                 .background(
                     LinearGradient(
                         colors: [.primaryGradientStart, .primaryGradientEnd],
@@ -296,10 +304,10 @@ struct SignupView: View {
         } label: {
             HStack(spacing: 4) {
                 Text("Already have an account?")
-                    .foregroundStyle(.white.opacity(0.85))
+                    .foregroundStyle(Color.darkText.opacity(0.9))
                 Text("Sign In")
                     .fontWeight(.bold)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color.darkText)
             }
             .font(.subheadline)
         }
