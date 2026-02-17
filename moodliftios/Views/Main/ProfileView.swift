@@ -10,6 +10,8 @@ struct ProfileView: View {
                 headerSection
                 VStack(spacing: Theme.spaceL) {
                     achievementsCard
+                    myContentSection
+                    savedItemsSection
                     recentActivitySection
                 }
                 .padding(.horizontal, Theme.spaceM)
@@ -19,8 +21,19 @@ struct ProfileView: View {
         }
         .background(Color.appBackground)
         .navigationBarTitleDisplayMode(.inline)
-        .task { await viewModel.loadProfile() }
-        .refreshable { await viewModel.loadProfile() }
+        .onAppear {
+            MySubmittedContentStore.shared.reloadForCurrentUser()
+        }
+        .task {
+            await viewModel.loadProfile()
+            await viewModel.loadMyContent()
+            AuthService.shared.setLastKnownStatsBalance(viewModel.stats?.pointsBalance)
+        }
+        .refreshable {
+            await viewModel.loadProfile()
+            await viewModel.loadMyContent()
+            AuthService.shared.setLastKnownStatsBalance(viewModel.stats?.pointsBalance)
+        }
     }
 
     // MARK: - Header (personal space feel)
@@ -31,16 +44,19 @@ struct ProfileView: View {
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
-            VStack(spacing: Theme.spaceM) {
+            VStack(spacing: Theme.spaceL) {
                 ZStack {
                     Circle()
-                        .fill(Color.white.opacity(0.2))
-                        .frame(width: 96, height: 96)
+                        .fill(Color.white.opacity(0.25))
+                        .frame(width: 88, height: 88)
+                    Circle()
+                        .strokeBorder(Color.white.opacity(0.4), lineWidth: 2)
+                        .frame(width: 88, height: 88)
                     Text(userInitial)
-                        .font(.system(size: 40, weight: .bold, design: .rounded))
+                        .font(.system(size: 36, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
                 }
-                VStack(spacing: 4) {
+                VStack(spacing: 6) {
                     Text(user?.username ?? "User")
                         .font(.themeTitle())
                         .foregroundStyle(.white)
@@ -51,7 +67,6 @@ struct ProfileView: View {
                         Text("With you since \(memberSince.formatted(.dateTime.year()))")
                             .font(.themeCaption())
                             .foregroundStyle(.white.opacity(0.75))
-                            .padding(.top, 2)
                     }
                 }
             }
@@ -85,7 +100,7 @@ struct ProfileView: View {
                     )
                     AchievementPill(
                         icon: "star.fill",
-                        value: "\(viewModel.stats?.pointsBalance ?? user?.pointsBalance ?? 0)",
+                        value: "\(AuthService.shared.displayPoints)",
                         label: "Points",
                         tint: .inspirationYellow
                     )
@@ -96,8 +111,97 @@ struct ProfileView: View {
                         tint: .jokesBlue
                     )
                 }
+                if showWelcomeBonusHint {
+                    Text("Your points are from your welcome bonus for joining. Check in daily to earn more.")
+                        .font(.themeCaption())
+                        .foregroundStyle(Color.lightText)
+                        .multilineTextAlignment(.center)
+                        .padding(.top, Theme.spaceS)
+                }
             }
         }
+    }
+
+    // MARK: - My Content (posts you shared + total likes)
+    private var myContentSection: some View {
+        NavigationLink(destination: MyContentView()) {
+            HStack(spacing: Theme.spaceM) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: Theme.radiusMedium)
+                        .fill(Color.jokesBlueLight)
+                        .frame(width: 44, height: 44)
+                    Image(systemName: "doc.text.fill")
+                        .font(.system(size: 20))
+                        .foregroundStyle(Color.jokesBlue)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("My Content")
+                        .font(.themeHeadline())
+                        .foregroundStyle(Color.darkText)
+                    Text(myContentSubtitle)
+                        .font(.themeCaption())
+                        .foregroundStyle(Color.lightText)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.lightText)
+            }
+            .padding(Theme.spaceM)
+            .background(Color.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMedium))
+            .shadow(color: Theme.cardShadow().color, radius: Theme.cardShadow().radius, y: Theme.cardShadow().y)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var myContentSubtitle: String {
+        let count = viewModel.myContent.count
+        let likes = viewModel.totalLikesReceived
+        if count == 0 { return "Your posts and likes" }
+        if count == 1 {
+            return likes == 1 ? "1 post · 1 like" : "1 post · \(likes) likes"
+        }
+        return "\(count) posts · \(likes) likes"
+    }
+
+    /// Points to show on Profile: use the higher of auth balance or stats balance so check-in rewards show when stats is updated but auth profile isn’t yet.
+    private var showWelcomeBonusHint: Bool {
+        let checkins = viewModel.stats?.totalCheckins ?? user?.totalCheckins ?? 0
+        return checkins == 0 && AuthService.shared.displayPoints > 0
+    }
+
+    // MARK: - Saved items (moved from tab bar; access from Profile)
+    private var savedItemsSection: some View {
+        NavigationLink(destination: SavedItemsView()) {
+            HStack(spacing: Theme.spaceM) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: Theme.radiusMedium)
+                        .fill(Color.primarySoftLight)
+                        .frame(width: 44, height: 44)
+                    Image(systemName: "bookmark.fill")
+                        .font(.system(size: 20))
+                        .foregroundStyle(Color.brandPrimary)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Saved Items")
+                        .font(.themeHeadline())
+                        .foregroundStyle(Color.darkText)
+                    Text("Your bookmarked content")
+                        .font(.themeCaption())
+                        .foregroundStyle(Color.lightText)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.lightText)
+            }
+            .padding(Theme.spaceM)
+            .background(Color.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMedium))
+            .shadow(color: Theme.cardShadow().color, radius: Theme.cardShadow().radius, y: Theme.cardShadow().y)
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Recent activity (softer framing)

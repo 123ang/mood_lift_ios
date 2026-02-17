@@ -5,8 +5,7 @@ struct ContentDetailView: View {
     @State private var viewModel: ContentViewModel
     @State private var showReportSheet = false
     @State private var reportReason = ""
-    @State private var showAnswerForId: Set<String> = []
-    @State private var selectedQuizAnswer: [String: String] = [:]
+    private let progressStore = ContentProgressStore.shared
     @State private var showSaveSuccess = false
     @Environment(\.dismiss) private var dismiss
     private let authService = AuthService.shared
@@ -82,10 +81,21 @@ struct ContentDetailView: View {
         } message: {
             Text("This content has been added to your saved items.")
         }
+        .alert("Unlock failed", isPresented: Binding(
+            get: { viewModel.errorMessage != nil },
+            set: { if !$0 { viewModel.errorMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) { viewModel.errorMessage = nil }
+        } message: {
+            Text(viewModel.errorMessage ?? "")
+        }
         .sheet(isPresented: $showReportSheet) {
             reportSheet
         }
     }
+
+    /// Single source for display points (matches Profile and AuthService.displayPoints).
+    private var userPoints: Int { authService.displayPoints }
 
     // MARK: - Top Bar
 
@@ -112,11 +122,11 @@ struct ContentDetailView: View {
 
             Spacer()
 
-            // Points pill
+            // Points pill (same source as Profile: pointsBalance / points)
             HStack(spacing: 5) {
                 Image(systemName: "star.fill")
                     .font(.system(size: 12))
-                Text("\(authService.currentUser?.points ?? 0)")
+                Text("\(userPoints)")
                     .font(.system(size: 14, weight: .bold, design: .rounded))
             }
             .foregroundStyle(Color.darkText)
@@ -162,9 +172,9 @@ struct ContentDetailView: View {
 
     @ViewBuilder
     private func unlockedContent(content: ContentItem, item: DailyContentItem) -> some View {
-        // Content type badge
+        // Content type badge (Jokes shown as Q&A when question/answer present)
         HStack {
-            contentTypeBadge(type: content.contentType)
+            contentTypeBadge(type: effectiveContentType(content: content))
             Spacer()
 
             // Report button
@@ -179,8 +189,8 @@ struct ContentDetailView: View {
             }
         }
 
-        // Main content based on type
-        switch content.contentType {
+        // Main content: Jokes with question/answer always use Q&A (reveal answer); else by type
+        switch effectiveContentType(content: content) {
         case "quiz":
             quizContent(content: content)
         case "qa":
@@ -212,13 +222,46 @@ struct ContentDetailView: View {
 
     @ViewBuilder
     private func textContent(content: ContentItem) -> some View {
-        Text(content.displayText)
-            .font(.system(size: 20, weight: .medium, design: .serif))
-            .foregroundStyle(Color.darkText)
-            .multilineTextAlignment(.center)
-            .lineSpacing(6)
+        let mainText = content.displayText
+        let hasMain = !mainText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+
+        if hasMain {
+            Text(mainText)
+                .font(.system(size: 20, weight: .medium, design: .serif))
+                .foregroundStyle(Color.darkText)
+                .multilineTextAlignment(.center)
+                .lineSpacing(6)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+        } else if let q = content.question, !q.isEmpty, let a = content.answer, !a.isEmpty {
+            // Fallback: show question + answer (e.g. joke stored as Q&A but returned as "text")
+            VStack(spacing: 16) {
+                Text(q)
+                    .font(.system(size: 18, weight: .medium, design: .rounded))
+                    .foregroundStyle(Color.darkText)
+                    .multilineTextAlignment(.center)
+                Text(a)
+                    .font(.system(size: 17, weight: .semibold, design: .rounded))
+                    .foregroundStyle(category.color)
+                    .multilineTextAlignment(.center)
+            }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
+        } else if let q = content.question, !q.isEmpty {
+            Text(q)
+                .font(.system(size: 20, weight: .medium, design: .serif))
+                .foregroundStyle(Color.darkText)
+                .multilineTextAlignment(.center)
+                .lineSpacing(6)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+        } else {
+            Text("No content available")
+                .font(.system(size: 16))
+                .foregroundStyle(Color.lightText)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 24)
+        }
     }
 
     // MARK: - Quiz Content
@@ -256,7 +299,7 @@ struct ContentDetailView: View {
 
     @ViewBuilder
     private func quizOptionButton(label: String, value: String, contentId: String, correctOption: String?) -> some View {
-        let selected = selectedQuizAnswer[contentId]
+        let selected = progressStore.selectedQuizAnswer(for: contentId)
         let isSelected = selected == label
         let isCorrect = label == correctOption
         let hasAnswered = selected != nil
@@ -264,7 +307,7 @@ struct ContentDetailView: View {
         Button {
             if !hasAnswered {
                 withAnimation(.spring(response: 0.3)) {
-                    selectedQuizAnswer[contentId] = label
+                    progressStore.setQuizAnswer(contentId: contentId, option: label)
                 }
             }
         } label: {
@@ -346,8 +389,8 @@ struct ContentDetailView: View {
             }
             .padding(.vertical, 8)
 
-            // Reveal / Answer
-            if showAnswerForId.contains(content.id) {
+            // Reveal / Answer (persisted so it stays revealed when returning)
+            if progressStore.isRevealed(contentId: content.id) {
                 VStack(spacing: 8) {
                     HStack(spacing: 6) {
                         Image(systemName: "lightbulb.fill")
@@ -380,7 +423,7 @@ struct ContentDetailView: View {
             } else {
                 Button {
                     withAnimation(.spring(response: 0.4)) {
-                        let _ = showAnswerForId.insert(content.id)
+                        progressStore.revealAnswer(contentId: content.id)
                     }
                 } label: {
                     HStack(spacing: 8) {
@@ -422,7 +465,9 @@ struct ContentDetailView: View {
                 .multilineTextAlignment(.center)
 
             // Unlock button
+            let canAfford = userPoints >= Constants.firstUnlockCost
             Button {
+                guard canAfford else { return }
                 Task {
                     await viewModel.unlockContent(contentId: item.contentId)
                 }
@@ -435,9 +480,12 @@ struct ContentDetailView: View {
                         HStack(spacing: 8) {
                             Image(systemName: "lock.open.fill")
                                 .font(.system(size: 15))
-                            Text("Unlock for 5 points")
+                            Text(canAfford
+                                ? "Unlock by \(Constants.firstUnlockCost) points"
+                                : "Need \(Constants.firstUnlockCost) points")
                                 .font(.system(size: 16, weight: .bold, design: .rounded))
                         }
+                        .contentShape(Rectangle())
                     }
                 }
                 .foregroundStyle(.white)
@@ -447,15 +495,16 @@ struct ContentDetailView: View {
                     Capsule()
                         .fill(
                             LinearGradient(
-                                colors: [category.color, category.color.opacity(0.8)],
+                                colors: [canAfford ? category.color : Color.mutedText, (canAfford ? category.color : Color.mutedText).opacity(0.8)],
                                 startPoint: .leading,
                                 endPoint: .trailing
                             )
                         )
-                        .shadow(color: category.color.opacity(0.3), radius: 8, y: 4)
+                        .shadow(color: (canAfford ? category.color : Color.mutedText).opacity(0.3), radius: 8, y: 4)
                 )
             }
-            .disabled(viewModel.isUnlocking)
+            .buttonStyle(.plain)
+            .disabled(viewModel.isUnlocking || !canAfford)
             .padding(.horizontal, 20)
 
             Spacer()
@@ -516,12 +565,12 @@ struct ContentDetailView: View {
                 }
             } label: {
                 VStack(spacing: 4) {
-                    Image(systemName: "bookmark")
+                    Image(systemName: viewModel.savedContentIds.contains(content.id) ? "bookmark.fill" : "bookmark")
                         .font(.system(size: 20))
                     Text("Save")
                         .font(.system(size: 12, weight: .semibold, design: .rounded))
                 }
-                .foregroundStyle(Color.lightText)
+                .foregroundStyle(viewModel.savedContentIds.contains(content.id) ? Color.brandPrimary : Color.lightText)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)
             }
@@ -572,18 +621,28 @@ struct ContentDetailView: View {
                         .font(.system(size: 14, weight: .semibold, design: .rounded))
                         .foregroundStyle(Color.darkText)
 
-                    TextField("Describe the issue...", text: $reportReason, axis: .vertical)
-                        .textFieldStyle(.plain)
-                        .lineLimit(3...6)
-                        .padding(14)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(Color.gray.opacity(0.06))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-                                )
-                        )
+                    ZStack(alignment: .topLeading) {
+                        if reportReason.isEmpty {
+                            Text("Describe the issue...")
+                                .font(.system(size: 17))
+                                .foregroundStyle(Color.placeholderOnLight)
+                                .padding(14)
+                        }
+                        TextField("", text: $reportReason, axis: .vertical)
+                            .textFieldStyle(.plain)
+                            .lineLimit(3...6)
+                            .foregroundStyle(Color.darkText)
+                            .tint(Color.brandPrimary)
+                            .padding(14)
+                    }
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.cardBackground)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.borderColor.opacity(0.2), lineWidth: 1)
+                            )
+                    )
                 }
                 .padding(.horizontal, 20)
 
@@ -621,6 +680,21 @@ struct ContentDetailView: View {
             }
         }
         .presentationDetents([.medium])
+    }
+
+    // MARK: - Content Type (Jokes → Q&A; Fun Facts with options → Quiz ABCD)
+    private func effectiveContentType(content: ContentItem) -> String {
+        if category == .jokes {
+            let hasQuestion = !(content.question ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            let hasAnswer = !(content.answer ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            if hasQuestion || hasAnswer { return "qa" }
+        }
+        if category == .facts {
+            let hasOption = [content.optionA, content.optionB, content.optionC, content.optionD]
+                .contains { ($0 ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false }
+            if hasOption { return "quiz" }
+        }
+        return content.contentType
     }
 
     // MARK: - Content Type Badge

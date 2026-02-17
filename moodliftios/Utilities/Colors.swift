@@ -29,10 +29,12 @@ extension Color {
     static let cardBackground = Color(hex: "#fefcfb")
     static let cardBackgroundAlt = Color(hex: "#f8f4f2")
 
-    // Text — soft contrast
+    // Text — soft contrast (dark on light backgrounds for readability)
     static let darkText = Color(hex: "#4a4543")
     static let lightText = Color(hex: "#7a7573")
     static let mutedText = Color(hex: "#9c9694")
+    /// Placeholder text on light backgrounds (e.g. text fields) — dark enough to read clearly
+    static let placeholderOnLight = Color(hex: "#5a5553")
 
     // Semantic (gentle, not aggressive)
     static let successSoft = Color(hex: "#7bc4a8")

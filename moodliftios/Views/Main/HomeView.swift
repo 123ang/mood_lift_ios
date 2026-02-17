@@ -20,8 +20,26 @@ struct HomeView: View {
                     moodBoosterSectionHeader
                     categoryGrid
                     NavigationLink(destination: SubmitContentView()) {
-                        MoodButton(title: "Submit your own content", icon: "plus.circle.fill", style: .primary, action: {})
+                        HStack(spacing: Theme.spaceS) {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            Text("Submit your own content")
+                                .font(.themeHeadline())
+                        }
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, Theme.spaceM)
+                        .background(
+                            LinearGradient(
+                                colors: [Color.primaryGradientStart, Color.primaryGradientEnd],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMedium))
+                        .shadow(color: Color.encouragementPink.opacity(0.3), radius: 6, y: 3)
                     }
+                    .buttonStyle(.plain)
                     .padding(.horizontal, Theme.spaceM)
                     .padding(.bottom, Theme.spaceXXL)
                 }
@@ -247,7 +265,7 @@ struct HomeView: View {
             Image(systemName: "star.fill")
                 .font(.system(size: 14))
                 .foregroundStyle(Color.darkText)
-            Text("\(authService.currentUser?.points ?? 0) points")
+            Text("\(authService.displayPoints) points")
                 .font(.themeCaptionMedium())
                 .foregroundStyle(Color.darkText)
         }
@@ -270,31 +288,33 @@ struct HomeView: View {
     }
 }
 
-// MARK: - Category Card (soft, centered content)
+// MARK: - Category Card (soft, centered; full text, no truncation)
 private struct CategoryCard: View {
     let category: ContentCategory
 
     var body: some View {
-        VStack(alignment: .center, spacing: Theme.spaceS) {
-            Text(category.displayName)
-                .font(.themeHeadline())
-                .foregroundStyle(Color.darkText)
-                .multilineTextAlignment(.center)
+        VStack(alignment: .center, spacing: Theme.spaceM) {
             Image(category.imageAssetName)
                 .renderingMode(.template)
                 .resizable()
                 .scaledToFit()
-                .frame(width: 44, height: 44)
+                .frame(width: 40, height: 40)
                 .foregroundStyle(category.color.opacity(0.9))
+            Text(category.displayName)
+                .font(.themeHeadline())
+                .foregroundStyle(Color.darkText)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
             Text(category.description)
                 .font(.themeCaption())
                 .foregroundStyle(Color.lightText)
                 .multilineTextAlignment(.center)
-                .lineLimit(2)
+                .lineLimit(3)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(Theme.spaceL)
-        .frame(maxWidth: .infinity)
-        .aspectRatio(0.88, contentMode: .fit)
+        .frame(maxWidth: .infinity, minHeight: 120)
         .background(
             RoundedRectangle(cornerRadius: Theme.radiusLarge)
                 .fill(category.lightColor)

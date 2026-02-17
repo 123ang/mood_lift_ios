@@ -85,7 +85,7 @@ struct DailyCheckinView: View {
                 HStack(spacing: 5) {
                     Image(systemName: "star.fill")
                         .font(.system(size: 12))
-                    Text("\(authService.currentUser?.points ?? 0)")
+                    Text("\(authService.displayPoints)")
                         .font(.system(size: 14, weight: .bold, design: .rounded))
                 }
                 .foregroundStyle(Color.darkText)
@@ -364,7 +364,7 @@ struct DailyCheckinView: View {
                         .font(.system(size: 15, weight: .medium, design: .rounded))
                         .foregroundStyle(Color.darkText)
                     Spacer()
-                    Text("\(authService.currentUser?.points ?? 0) pts")
+                    Text("\(authService.displayPoints) pts")
                         .font(.system(size: 18, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.inspirationYellow)
                 }

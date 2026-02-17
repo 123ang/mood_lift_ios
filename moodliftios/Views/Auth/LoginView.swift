@@ -89,19 +89,26 @@ struct LoginView: View {
                 )
             }
 
-            // Email field (dark text on light background)
+            // Email field (dark placeholder + text)
             HStack(spacing: 12) {
                 Image(systemName: "envelope.fill")
                     .foregroundStyle(Color.darkText)
                     .frame(width: 20)
 
-                TextField("Email address", text: $email)
-                    .textContentType(.emailAddress)
-                    .keyboardType(.emailAddress)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .foregroundStyle(Color.darkText)
-                    .tint(Color.brandPrimary)
+                ZStack(alignment: .leading) {
+                    if email.isEmpty {
+                        Text("Email address")
+                            .font(.system(size: 17))
+                            .foregroundStyle(Color.placeholderOnLight)
+                    }
+                    TextField("", text: $email)
+                        .textContentType(.emailAddress)
+                        .keyboardType(.emailAddress)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .foregroundStyle(Color.darkText)
+                        .tint(Color.brandPrimary)
+                }
             }
             .padding(16)
             .background(Color.appBackground)
@@ -113,18 +120,25 @@ struct LoginView: View {
                     .foregroundStyle(Color.darkText)
                     .frame(width: 20)
 
-                Group {
-                    if showPassword {
-                        TextField("Password", text: $password)
-                    } else {
-                        SecureField("Password", text: $password)
+                ZStack(alignment: .leading) {
+                    if password.isEmpty {
+                        Text("Password")
+                            .font(.system(size: 17))
+                            .foregroundStyle(Color.placeholderOnLight)
                     }
+                    Group {
+                        if showPassword {
+                            TextField("", text: $password)
+                        } else {
+                            SecureField("", text: $password)
+                        }
+                    }
+                    .textContentType(.password)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .foregroundStyle(Color.darkText)
+                    .tint(Color.brandPrimary)
                 }
-                .textContentType(.password)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .foregroundStyle(Color.darkText)
-                .tint(Color.brandPrimary)
 
                 Button {
                     showPassword.toggle()
@@ -214,6 +228,17 @@ struct LoginView: View {
 
     // MARK: - Helpers
 
+    private func authFriendlyMessage(_ error: APIError) -> String {
+        switch error {
+        case .authError:
+            return "Invalid email or password. New here? Tap Sign Up to create an account."
+        case .serverError(let msg):
+            return msg
+        default:
+            return error.userMessage
+        }
+    }
+
     private func connectionErrorMessage(for error: Error) -> String {
         let ns = error as NSError
         if ns.domain == NSURLErrorDomain {
@@ -235,22 +260,28 @@ struct LoginView: View {
     // MARK: - Actions
 
     private func handleLogin() {
-        guard !email.isEmpty, !password.isEmpty else { return }
+        let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedPassword = password.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedEmail.isEmpty, !trimmedPassword.isEmpty else { return }
 
         errorMessage = nil
         isLoading = true
 
         Task {
             do {
-                try await AuthService.shared.login(email: email, password: password)
+                try await AuthService.shared.login(email: trimmedEmail, password: trimmedPassword)
             } catch let error as APIError {
                 await MainActor.run {
-                    errorMessage = error.userMessage
+                    email = trimmedEmail
+                    password = trimmedPassword
+                    errorMessage = authFriendlyMessage(error)
                     shakeError.toggle()
                     isLoading = false
                 }
             } catch {
                 await MainActor.run {
+                    email = trimmedEmail
+                    password = trimmedPassword
                     errorMessage = connectionErrorMessage(for: error)
                     shakeError.toggle()
                     isLoading = false

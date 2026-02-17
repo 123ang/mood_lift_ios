@@ -80,11 +80,14 @@ actor APIService {
             throw APIError.networkError("Invalid response")
         }
         if httpResponse.statusCode == 401 {
-            throw APIError.authError("Authentication required")
+            let message = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])
+                .flatMap { ($0["error"] as? String) ?? ($0["message"] as? String) }
+                ?? "Invalid email or password"
+            throw APIError.authError(message)
         }
         if httpResponse.statusCode >= 400 {
             if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let error = json["error"] as? String {
+               let error = (json["error"] as? String) ?? (json["message"] as? String) {
                 throw APIError.serverError(error)
             }
             throw APIError.serverError("Server error: \(httpResponse.statusCode)")

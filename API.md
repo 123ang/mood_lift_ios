@@ -2,7 +2,7 @@
 
 **Production base URL:** `https://moodlift.suntzutechnologies.com/api`
 
-For deployment (Nginx, PM2, PostgreSQL), see [DEPLOYMENT.md](./DEPLOYMENT.md).
+For deployment (Nginx, PM2, PostgreSQL), see your backend repo’s deployment docs.
 
 ---
 

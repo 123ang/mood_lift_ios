@@ -43,7 +43,7 @@ struct ContentItem: Codable, Identifiable, @unchecked Sendable {
         case createdAt = "created_at"
     }
 
-    /// Display text - handles all content types
+    /// Display text - handles all content types. For "text", also falls back to question (e.g. jokes in question field).
     var displayText: String {
         switch contentType {
         case "quiz":
@@ -51,7 +51,7 @@ struct ContentItem: Codable, Identifiable, @unchecked Sendable {
         case "qa":
             return question ?? contentText ?? ""
         default:
-            return contentText ?? ""
+            return contentText ?? question ?? ""
         }
     }
 
@@ -91,7 +91,7 @@ struct DailyContentItem: Codable, Identifiable, @unchecked Sendable {
     let contentId: String
     let category: String
     let positionInDay: Int
-    let content: ContentItem?
+    var content: ContentItem?
     var isUnlocked: Bool
 
     enum CodingKeys: String, CodingKey {

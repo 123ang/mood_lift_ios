@@ -8,6 +8,17 @@ class AuthService {
     var currentUser: User?
     var isAuthenticated: Bool = false
     var isLoading: Bool = true
+    /// When stats API returns a higher balance than profile (e.g. after check-in), use it so all screens show the same points.
+    private(set) var lastKnownStatsBalance: Int?
+
+    /// Single source for points shown everywhere. Uses the higher of profile balance or stats balance so Profile, Home, and Content detail stay in sync (e.g. 6 after check-in).
+    var displayPoints: Int {
+        let authBalance: Int = {
+            guard let u = currentUser else { return 0 }
+            return min(u.points, u.pointsBalance)
+        }()
+        return max(authBalance, lastKnownStatsBalance ?? 0)
+    }
     
     private let tokenKey = "com.moodlift.authToken"
     
@@ -32,6 +43,7 @@ class AuthService {
             await MainActor.run {
                 self.currentUser = user
                 self.isAuthenticated = true
+                MySubmittedContentStore.shared.reloadForCurrentUser()
             }
         } catch {
             KeychainHelper.delete(key: tokenKey)
@@ -61,6 +73,7 @@ class AuthService {
         await MainActor.run {
             self.currentUser = response.user
             self.isAuthenticated = true
+            MySubmittedContentStore.shared.reloadForCurrentUser()
         }
     }
     
@@ -84,6 +97,7 @@ class AuthService {
         await MainActor.run {
             self.currentUser = response.user
             self.isAuthenticated = true
+            MySubmittedContentStore.shared.reloadForCurrentUser()
         }
     }
     
@@ -100,11 +114,41 @@ class AuthService {
         do {
             let data = try await APIService.shared.requestData(endpoint: "/auth/profile")
             let user = try APIDecoder.decode(User.self, from: data)
+            var statsBalance: Int?
+            if let stats = try? await PointsService.shared.getUserStats() {
+                statsBalance = stats.pointsBalance
+            }
             await MainActor.run {
                 self.currentUser = user
+                self.lastKnownStatsBalance = statsBalance
             }
         } catch {
             // Silently fail
+        }
+    }
+
+    /// Call when you have fresh stats so displayPoints stays in sync (e.g. when Profile loads).
+    func setLastKnownStatsBalance(_ value: Int?) {
+        lastKnownStatsBalance = value
+    }
+
+    /// Update current user's balance from check-in response so "Points" reflects the new total (e.g. 5 + 1 = 6).
+    func updateBalanceFromCheckin(totalPoints: Int) async {
+        await MainActor.run {
+            guard var u = currentUser else { return }
+            u.points = totalPoints
+            u.pointsBalance = totalPoints
+            currentUser = u
+        }
+    }
+
+    /// Add points locally when user submits content (backend should also award and record the transaction).
+    func addPointsForSubmission(_ amount: Int) async {
+        await MainActor.run {
+            guard amount > 0, var u = currentUser else { return }
+            u.points += amount
+            u.pointsBalance += amount
+            currentUser = u
         }
     }
     

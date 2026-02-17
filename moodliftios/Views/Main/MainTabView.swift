@@ -14,11 +14,11 @@ struct MainTabView: View {
             }
 
             NavigationStack {
-                SavedItemsView()
+                FeedsView()
             }
             .tag(1)
             .tabItem {
-                Label("Saved", systemImage: "bookmark.fill")
+                Label("Feeds", systemImage: "square.stack.3d.up.fill")
             }
 
             NavigationStack {

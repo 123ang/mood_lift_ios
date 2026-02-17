@@ -33,10 +33,10 @@ class HomeViewModel {
             let response = try await CheckinService.shared.performCheckin()
             pointsEarned = response.pointsEarned
             showCheckinSuccess = true
-            // Refresh info
+            // Update balance from check-in response so Points shows 6 (5 + 1) immediately
+            await AuthService.shared.updateBalanceFromCheckin(totalPoints: response.totalPoints)
+            // Refresh check-in info (streak, canCheckin) — skip refreshProfile so we don’t overwrite balance with server’s stale 5
             await loadCheckinInfo()
-            // Refresh user profile
-            await AuthService.shared.refreshProfile()
         } catch {
             errorMessage = error.localizedDescription
         }

@@ -21,8 +21,12 @@ class SubmitContentViewModel {
     var isValid: Bool {
         switch contentType {
         case "text":
-            return !contentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            let contentOk = !contentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 && !selectedCategory.rawValue.isEmpty
+            if selectedCategory == .inspiration {
+                return contentOk && !author.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            }
+            return contentOk
         case "quiz":
             return !question.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 && !optionA.isEmpty && !optionB.isEmpty
@@ -59,7 +63,11 @@ class SubmitContentViewModel {
         )
         
         do {
-            _ = try await ContentService.shared.submitContent(submission)
+            let item = try await ContentService.shared.submitContent(submission)
+            PendingFeedStore.shared.addPending(item)
+            MySubmittedContentStore.shared.add(item, submittedByUserId: AuthService.shared.currentUser?.id)
+            await AuthService.shared.addPointsForSubmission(Constants.pointsRewardForContentSubmission)
+            // Don’t refresh profile here so the +1 point stays visible; backend should also update points_balance when it records the transaction
             showSuccess = true
             resetForm()
         } catch {
@@ -78,5 +86,24 @@ class SubmitContentViewModel {
         correctOption = ""
         author = ""
         contentType = "text"
+        selectedCategory = .encouragement
+    }
+
+    /// Categories allowed for the current content type. Text = Encouragement + Inspiration; Quiz = Fun Facts; Q&A = Jokes.
+    func allowedCategories(for contentType: String) -> [ContentCategory] {
+        switch contentType {
+        case "text": return [.encouragement, .inspiration]
+        case "quiz": return [.facts]
+        case "qa": return [.jokes]
+        default: return [.encouragement, .inspiration]
+        }
+    }
+
+    /// Set category to the first allowed when switching content type (call from View).
+    func syncCategoryToContentType() {
+        let allowed = allowedCategories(for: contentType)
+        if !allowed.contains(selectedCategory) {
+            selectedCategory = allowed.first ?? .encouragement
+        }
     }
 }

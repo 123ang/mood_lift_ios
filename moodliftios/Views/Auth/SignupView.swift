@@ -141,18 +141,25 @@ struct SignupView: View {
                 )
             }
 
-            // Username field (dark text on light background)
+            // Username field (dark placeholder + text)
             HStack(spacing: 12) {
                 Image(systemName: "person.fill")
                     .foregroundStyle(Color.darkText)
                     .frame(width: 20)
 
-                TextField("Username", text: $username)
-                    .textContentType(.username)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .foregroundStyle(Color.darkText)
-                    .tint(Color.brandPrimary)
+                ZStack(alignment: .leading) {
+                    if username.isEmpty {
+                        Text("Username")
+                            .font(.system(size: 17))
+                            .foregroundStyle(Color.placeholderOnLight)
+                    }
+                    TextField("", text: $username)
+                        .textContentType(.username)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .foregroundStyle(Color.darkText)
+                        .tint(Color.brandPrimary)
+                }
             }
             .padding(16)
             .background(Color.appBackground)
@@ -164,13 +171,20 @@ struct SignupView: View {
                     .foregroundStyle(Color.darkText)
                     .frame(width: 20)
 
-                TextField("Email address", text: $email)
-                    .textContentType(.emailAddress)
-                    .keyboardType(.emailAddress)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .foregroundStyle(Color.darkText)
-                    .tint(Color.brandPrimary)
+                ZStack(alignment: .leading) {
+                    if email.isEmpty {
+                        Text("Email address")
+                            .font(.system(size: 17))
+                            .foregroundStyle(Color.placeholderOnLight)
+                    }
+                    TextField("", text: $email)
+                        .textContentType(.emailAddress)
+                        .keyboardType(.emailAddress)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .foregroundStyle(Color.darkText)
+                        .tint(Color.brandPrimary)
+                }
             }
             .padding(16)
             .background(Color.appBackground)
@@ -182,18 +196,25 @@ struct SignupView: View {
                     .foregroundStyle(Color.darkText)
                     .frame(width: 20)
 
-                Group {
-                    if showPassword {
-                        TextField("Password (min 6 characters)", text: $password)
-                    } else {
-                        SecureField("Password (min 6 characters)", text: $password)
+                ZStack(alignment: .leading) {
+                    if password.isEmpty {
+                        Text("Password (min 6 characters)")
+                            .font(.system(size: 17))
+                            .foregroundStyle(Color.placeholderOnLight)
                     }
+                    Group {
+                        if showPassword {
+                            TextField("", text: $password)
+                        } else {
+                            SecureField("", text: $password)
+                        }
+                    }
+                    .textContentType(.newPassword)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .foregroundStyle(Color.darkText)
+                    .tint(Color.brandPrimary)
                 }
-                .textContentType(.newPassword)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .foregroundStyle(Color.darkText)
-                .tint(Color.brandPrimary)
 
                 Button {
                     showPassword.toggle()
@@ -213,18 +234,25 @@ struct SignupView: View {
                     .foregroundStyle(Color.darkText)
                     .frame(width: 20)
 
-                Group {
-                    if showPassword {
-                        TextField("Confirm password", text: $confirmPassword)
-                    } else {
-                        SecureField("Confirm password", text: $confirmPassword)
+                ZStack(alignment: .leading) {
+                    if confirmPassword.isEmpty {
+                        Text("Confirm password")
+                            .font(.system(size: 17))
+                            .foregroundStyle(Color.placeholderOnLight)
                     }
+                    Group {
+                        if showPassword {
+                            TextField("", text: $confirmPassword)
+                        } else {
+                            SecureField("", text: $confirmPassword)
+                        }
+                    }
+                    .textContentType(.newPassword)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .foregroundStyle(Color.darkText)
+                    .tint(Color.brandPrimary)
                 }
-                .textContentType(.newPassword)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .foregroundStyle(Color.darkText)
-                .tint(Color.brandPrimary)
             }
             .padding(16)
             .background(Color.appBackground)

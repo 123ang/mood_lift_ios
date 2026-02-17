@@ -23,12 +23,23 @@ struct SubmitContentView: View {
             }
         }
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                }
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(Color.brandPrimary)
+            }
+        }
+        .onAppear { viewModel.syncCategoryToContentType() }
         .alert("Content Submitted!", isPresented: $viewModel.showSuccess) {
             Button("Awesome!") {
                 dismiss()
             }
         } message: {
-            Text("Thank you for sharing! Your content will be reviewed and published soon.")
+            Text("Thank you for sharing! You earned \(Constants.pointsRewardForContentSubmission) point\(Constants.pointsRewardForContentSubmission == 1 ? "" : "s") for submitting. Your content will be reviewed and published soon.")
         }
         .alert("Error", isPresented: .init(
             get: { viewModel.errorMessage != nil },
@@ -79,7 +90,7 @@ struct SubmitContentView: View {
         VStack(alignment: .leading, spacing: 10) {
             Text("CONTENT TYPE")
                 .font(.caption.weight(.bold))
-                .foregroundStyle(Color.lightText)
+                .foregroundStyle(Color.darkText)
                 .tracking(0.5)
 
             HStack(spacing: 0) {
@@ -87,6 +98,7 @@ struct SubmitContentView: View {
                     Button {
                         withAnimation(.easeInOut(duration: 0.2)) {
                             viewModel.contentType = type
+                            viewModel.syncCategoryToContentType()
                         }
                     } label: {
                         VStack(spacing: 4) {
@@ -127,12 +139,12 @@ struct SubmitContentView: View {
         VStack(alignment: .leading, spacing: 10) {
             Text("CATEGORY")
                 .font(.caption.weight(.bold))
-                .foregroundStyle(Color.lightText)
+                .foregroundStyle(Color.darkText)
                 .tracking(0.5)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
-                    ForEach(ContentCategory.allCases, id: \.self) { category in
+                    ForEach(viewModel.allowedCategories(for: viewModel.contentType), id: \.self) { category in
                         Button {
                             withAnimation(.easeInOut(duration: 0.2)) {
                                 viewModel.selectedCategory = category
@@ -189,30 +201,42 @@ struct SubmitContentView: View {
         }
     }
 
-    // MARK: - Text Form
-
+    // MARK: - Text Form (Encouragement = content only; Inspiration = content + author)
     private var textFormFields: some View {
         VStack(spacing: 16) {
             VStack(alignment: .leading, spacing: 6) {
                 Text("CONTENT *")
                     .font(.caption.weight(.bold))
-                    .foregroundStyle(Color.lightText)
+                    .foregroundStyle(Color.darkText)
                     .tracking(0.5)
 
-                TextEditor(text: $viewModel.contentText)
-                    .frame(minHeight: 140)
-                    .padding(12)
-                    .scrollContentBackground(.hidden)
-                    .background(Color.cardBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14)
-                            .stroke(Color.borderColor.opacity(0.15), lineWidth: 1)
-                    )
-                    .shadow(color: .black.opacity(0.03), radius: 4, y: 2)
+                ZStack(alignment: .topLeading) {
+                    if viewModel.contentText.isEmpty {
+                        Text("Share something uplifting...")
+                            .font(.subheadline)
+                            .foregroundStyle(Color.placeholderOnLight)
+                            .padding(16)
+                    }
+                    TextEditor(text: $viewModel.contentText)
+                        .font(.subheadline)
+                        .foregroundStyle(Color.darkText)
+                        .frame(minHeight: 140)
+                        .padding(12)
+                        .scrollContentBackground(.hidden)
+                        .tint(Color.brandPrimary)
+                }
+                .background(Color.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(Color.borderColor.opacity(0.15), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.03), radius: 4, y: 2)
             }
 
-            authorField
+            if viewModel.selectedCategory == .inspiration {
+                authorField
+            }
         }
     }
 
@@ -253,7 +277,7 @@ struct SubmitContentView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("CORRECT ANSWER *")
                     .font(.caption.weight(.bold))
-                    .foregroundStyle(Color.lightText)
+                    .foregroundStyle(Color.darkText)
                     .tracking(0.5)
 
                 HStack(spacing: 0) {
@@ -298,20 +322,31 @@ struct SubmitContentView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("ANSWER *")
                     .font(.caption.weight(.bold))
-                    .foregroundStyle(Color.lightText)
+                    .foregroundStyle(Color.darkText)
                     .tracking(0.5)
 
-                TextEditor(text: $viewModel.answer)
-                    .frame(minHeight: 100)
-                    .padding(12)
-                    .scrollContentBackground(.hidden)
-                    .background(Color.cardBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14)
-                            .stroke(Color.borderColor.opacity(0.15), lineWidth: 1)
-                    )
-                    .shadow(color: .black.opacity(0.03), radius: 4, y: 2)
+                ZStack(alignment: .topLeading) {
+                    if viewModel.answer.isEmpty {
+                        Text("Your answer...")
+                            .font(.subheadline)
+                            .foregroundStyle(Color.placeholderOnLight)
+                            .padding(16)
+                    }
+                    TextEditor(text: $viewModel.answer)
+                        .font(.subheadline)
+                        .foregroundStyle(Color.darkText)
+                        .frame(minHeight: 100)
+                        .padding(12)
+                        .scrollContentBackground(.hidden)
+                        .tint(Color.brandPrimary)
+                }
+                .background(Color.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(Color.borderColor.opacity(0.15), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.03), radius: 4, y: 2)
             }
         }
     }
@@ -320,7 +355,7 @@ struct SubmitContentView: View {
 
     private var authorField: some View {
         formTextField(
-            label: "AUTHOR (OPTIONAL)",
+            label: "AUTHOR *",
             placeholder: "Attribution or source",
             text: $viewModel.author
         )
@@ -330,19 +365,29 @@ struct SubmitContentView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label)
                 .font(.caption.weight(.bold))
-                .foregroundStyle(Color.lightText)
+                .foregroundStyle(Color.darkText)
                 .tracking(0.5)
 
-            TextField(placeholder, text: text)
-                .font(.subheadline)
-                .padding(14)
-                .background(Color.cardBackground)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14)
-                        .stroke(Color.borderColor.opacity(0.15), lineWidth: 1)
-                )
-                .shadow(color: .black.opacity(0.03), radius: 4, y: 2)
+            ZStack(alignment: .leading) {
+                if text.wrappedValue.isEmpty {
+                    Text(placeholder)
+                        .font(.subheadline)
+                        .foregroundStyle(Color.placeholderOnLight)
+                        .padding(14)
+                }
+                TextField("", text: text)
+                    .font(.subheadline)
+                    .foregroundStyle(Color.darkText)
+                    .tint(Color.brandPrimary)
+                    .padding(14)
+            }
+            .background(Color.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(Color.borderColor.opacity(0.15), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.03), radius: 4, y: 2)
         }
     }
 
@@ -355,7 +400,7 @@ struct SubmitContentView: View {
             Group {
                 if viewModel.isSubmitting {
                     ProgressView()
-                        .tint(.white)
+                        .tint(Color.darkText)
                 } else {
                     HStack(spacing: 8) {
                         Image(systemName: "paperplane.fill")
@@ -367,7 +412,7 @@ struct SubmitContentView: View {
             }
             .frame(maxWidth: .infinity)
             .frame(height: 54)
-            .foregroundStyle(.white)
+            .foregroundStyle(Color.darkText)
             .background(
                 LinearGradient(
                     colors: [.primaryGradientStart, .primaryGradientEnd],
