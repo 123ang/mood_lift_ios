@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct FeedsView: View {
+    @Environment(\.themeManager) private var themeManager
     @State private var viewModel = FeedsViewModel()
     private let pendingStore = PendingFeedStore.shared
     private let mySubmittedStore = MySubmittedContentStore.shared
@@ -19,35 +20,28 @@ struct FeedsView: View {
         return merged
     }
 
-    private var feedGradient: LinearGradient {
-        LinearGradient(
-            colors: [Color.primaryGradientStart, Color.primaryGradientEnd],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-    }
-
     var body: some View {
+        let palette = themeManager.currentPalette
         VStack(spacing: 0) {
-            headerSection
+            headerSection(palette: palette)
             if viewModel.isLoading && displayedItems.isEmpty {
                 Spacer()
                 ProgressView()
-                    .tint(.brandPrimary)
+                    .tint(palette.brandTint)
                 Text("Loading feed...")
                     .font(.themeCallout())
-                    .foregroundStyle(Color.lightText)
+                    .foregroundStyle(palette.mutedText)
                     .padding(.top, Theme.spaceM)
                 Spacer()
             } else if displayedItems.isEmpty {
                 Spacer()
-                feedEmptyState(message: viewModel.errorMessage)
+                feedEmptyState(message: viewModel.errorMessage, palette: palette)
                 Spacer()
             } else {
                 ScrollView(showsIndicators: false) {
                     LazyVStack(spacing: Theme.spaceL) {
                         ForEach(displayedItems) { item in
-                            FeedCard(item: item, onVote: { voteType in
+                            FeedCard(item: item, palette: palette, onVote: { voteType in
                                 Task { await viewModel.voteOnContent(contentId: item.id, voteType: voteType) }
                             })
                             .onAppear {
@@ -62,7 +56,7 @@ struct FeedsView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.appBackground)
+        .background(palette.background)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             // Reload from disk so after login we show the current user's saved posts
@@ -72,7 +66,7 @@ struct FeedsView: View {
         .refreshable { await viewModel.loadFeed() }
     }
 
-    private var headerSection: some View {
+    private func headerSection(palette: ThemePalette) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: Theme.spaceM) {
                 Image(systemName: "square.stack.3d.up.fill")
@@ -90,34 +84,40 @@ struct FeedsView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, Theme.spaceM)
         .padding(.vertical, Theme.spaceL)
-        .background(feedGradient)
+        .background(
+            LinearGradient(
+                colors: [palette.primaryGradientStart, palette.primaryGradientEnd],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
     }
 
     @ViewBuilder
-    private func feedEmptyState(message: String?) -> some View {
+    private func feedEmptyState(message: String?, palette: ThemePalette) -> some View {
         VStack(spacing: Theme.spaceM) {
             Image(systemName: "doc.text.magnifyingglass")
                 .font(.system(size: 44))
-                .foregroundStyle(Color.mutedText)
+                .foregroundStyle(palette.mutedText)
             Text("No posts yet")
                 .font(.themeHeadline())
-                .foregroundStyle(Color.darkText)
+                .foregroundStyle(palette.text)
             if let msg = message, !msg.isEmpty {
                 Text(msg)
                     .font(.themeCaption())
-                    .foregroundStyle(Color.darkText)
+                    .foregroundStyle(palette.text)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, Theme.spaceXL)
                 Button("Try again") {
                     Task { await viewModel.loadFeed() }
                 }
                 .font(.themeHeadline())
-                .foregroundStyle(Color.brandPrimary)
+                .foregroundStyle(palette.brandTint)
                 .padding(.top, 4)
             }
             Text("Share something from Home to see it here. Pull down to refresh.")
                 .font(.themeCaption())
-                .foregroundStyle(Color.mutedText)
+                .foregroundStyle(palette.mutedText)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, Theme.spaceXL)
         }
@@ -127,6 +127,7 @@ struct FeedsView: View {
 // MARK: - Feed card (Instagram/Facebook style: author, content, engagement)
 private struct FeedCard: View {
     let item: ContentItem
+    var palette: ThemePalette
     let onVote: (String) -> Void
 
     private var categoryColor: Color {
@@ -160,17 +161,17 @@ private struct FeedCard: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(authorName)
                         .font(.themeSubheadline())
-                        .foregroundStyle(Color.darkText)
+                        .foregroundStyle(palette.text)
                     HStack(spacing: 6) {
                         Text(categoryName)
                             .font(.themeCaptionMedium())
                             .foregroundStyle(categoryColor)
                         if let date = item.createdAt {
                             Text("·")
-                                .foregroundStyle(Color.mutedText)
+                                .foregroundStyle(palette.mutedText)
                             Text(date.formatted(.relative(presentation: .named)))
                                 .font(.themeCaption())
-                                .foregroundStyle(Color.lightText)
+                                .foregroundStyle(palette.mutedText)
                         }
                     }
                 }
@@ -180,13 +181,13 @@ private struct FeedCard: View {
             // Content body
             Text(item.displayText)
                 .font(.themeBody())
-                .foregroundStyle(Color.darkText)
+                .foregroundStyle(palette.text)
                 .multilineTextAlignment(.leading)
                 .frame(maxWidth: .infinity, alignment: .leading)
             if let answer = item.answer, !answer.isEmpty, item.contentType == "qa" {
                 Text(answer)
                     .font(.themeCallout())
-                    .foregroundStyle(Color.lightText)
+                    .foregroundStyle(palette.mutedText)
                     .italic()
             }
 
@@ -197,10 +198,10 @@ private struct FeedCard: View {
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: (item.userVote == "up" ? "hand.thumbsup.fill" : "hand.thumbsup"))
-                            .foregroundStyle(item.userVote == "up" ? categoryColor : Color.lightText)
+                            .foregroundStyle(item.userVote == "up" ? categoryColor : palette.mutedText)
                         Text("\(item.upvotes)")
                             .font(.themeCaption())
-                            .foregroundStyle(Color.lightText)
+                            .foregroundStyle(palette.mutedText)
                     }
                 }
                 .buttonStyle(.plain)
@@ -209,10 +210,10 @@ private struct FeedCard: View {
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: (item.userVote == "down" ? "hand.thumbsdown.fill" : "hand.thumbsdown"))
-                            .foregroundStyle(item.userVote == "down" ? Color.errorSoft : Color.lightText)
+                            .foregroundStyle(item.userVote == "down" ? Color.errorSoft : palette.mutedText)
                         Text("\(item.downvotes)")
                             .font(.themeCaption())
-                            .foregroundStyle(Color.lightText)
+                            .foregroundStyle(palette.mutedText)
                     }
                 }
                 .buttonStyle(.plain)
@@ -220,7 +221,7 @@ private struct FeedCard: View {
             }
         }
         .padding(Theme.spaceL)
-        .background(Color.cardBackground)
+        .background(palette.card)
         .clipShape(RoundedRectangle(cornerRadius: Theme.radiusLarge))
         .shadow(color: Theme.cardShadow().color, radius: Theme.cardShadow().radius, y: Theme.cardShadow().y)
     }

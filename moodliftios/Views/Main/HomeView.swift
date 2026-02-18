@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct HomeView: View {
+    @Environment(\.themeManager) private var themeManager
     @State private var viewModel = HomeViewModel()
     private let authService = AuthService.shared
 
@@ -10,15 +11,16 @@ struct HomeView: View {
     ]
 
     var body: some View {
+        let palette = themeManager.currentPalette
         ScrollView(showsIndicators: false) {
             VStack(spacing: 0) {
-                headerSection
+                headerSection(palette: palette)
                 VStack(alignment: .center, spacing: Theme.spaceXL) {
-                    greetingBlock
-                    checkinHeroCard
-                    pointsPill
-                    moodBoosterSectionHeader
-                    categoryGrid
+                    greetingBlock(palette: palette)
+                    checkinHeroCard(palette: palette)
+                    pointsPill(palette: palette)
+                    moodBoosterSectionHeader(palette: palette)
+                    categoryGrid(palette: palette)
                     NavigationLink(destination: SubmitContentView()) {
                         HStack(spacing: Theme.spaceS) {
                             Image(systemName: "plus.circle.fill")
@@ -31,13 +33,13 @@ struct HomeView: View {
                         .padding(.vertical, Theme.spaceM)
                         .background(
                             LinearGradient(
-                                colors: [Color.primaryGradientStart, Color.primaryGradientEnd],
+                                colors: [palette.primaryGradientStart, palette.primaryGradientEnd],
                                 startPoint: .leading,
                                 endPoint: .trailing
                             )
                         )
                         .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMedium))
-                        .shadow(color: Color.encouragementPink.opacity(0.3), radius: 6, y: 3)
+                        .shadow(color: palette.primary.opacity(0.3), radius: 6, y: 3)
                     }
                     .buttonStyle(.plain)
                     .padding(.horizontal, Theme.spaceM)
@@ -46,7 +48,7 @@ struct HomeView: View {
                 .frame(maxWidth: .infinity)
             }
         }
-        .background(Color.appBackground)
+        .background(palette.background)
         .navigationBarHidden(true)
         .task { await viewModel.loadCheckinInfo() }
         .refreshable {
@@ -64,7 +66,7 @@ struct HomeView: View {
     }
 
     // MARK: - Header (soft gradient, centered, prominent title)
-    private var headerSection: some View {
+    private func headerSection(palette: ThemePalette) -> some View {
         ZStack(alignment: .bottom) {
             VStack(spacing: Theme.spaceM) {
                 HStack(spacing: Theme.spaceS) {
@@ -85,26 +87,26 @@ struct HomeView: View {
             .frame(maxWidth: .infinity)
             .background(
                 LinearGradient(
-                    colors: [Color.primaryGradientStart, Color.primaryGradientEnd],
+                    colors: [palette.primaryGradientStart, palette.primaryGradientEnd],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
             )
-            welcomePill
+            welcomePill(palette: palette)
                 .offset(y: 18)
                 .zIndex(1)
         }
     }
 
-    private var welcomePill: some View {
+    private func welcomePill(palette: ThemePalette) -> some View {
         Text(greetingText)
             .font(.themeSubheadline())
-            .foregroundStyle(Color.darkText)
+            .foregroundStyle(palette.text)
             .padding(.horizontal, Theme.spaceL)
             .padding(.vertical, 6)
             .background(
                 Capsule()
-                    .fill(Color.cardBackground)
+                    .fill(palette.card)
                     .shadow(color: Color.black.opacity(0.05), radius: 8, y: 4)
             )
     }
@@ -118,10 +120,10 @@ struct HomeView: View {
     }
 
     // MARK: - Greeting area (emotional message, centered)
-    private var greetingBlock: some View {
+    private func greetingBlock(palette: ThemePalette) -> some View {
         Text(emotionalMessage)
             .font(.themeCallout())
-            .foregroundStyle(Color.lightText)
+            .foregroundStyle(palette.mutedText)
             .multilineTextAlignment(.center)
             .frame(maxWidth: .infinity, alignment: .center)
             .padding(.horizontal, Theme.spaceXL)
@@ -139,24 +141,24 @@ struct HomeView: View {
     }
 
     // MARK: - Check-in hero card (centered content)
-    private var checkinHeroCard: some View {
+    private func checkinHeroCard(palette: ThemePalette) -> some View {
         SoftCard(
-            backgroundColor: Color.primaryCardTint,
+            backgroundColor: palette.primary.opacity(0.12),
             cornerRadius: Theme.radiusXLarge,
             padding: Theme.spaceXL,
             useShadow: true,
             elevatedShadow: true,
-            borderColor: Color.brandPrimary.opacity(0.2),
+            borderColor: palette.brandTint.opacity(0.2),
             contentAlignment: .center
         ) {
             VStack(alignment: .center, spacing: Theme.spaceL) {
                 HStack(spacing: Theme.spaceS) {
                     Image(systemName: "sun.max.fill")
                         .font(.system(size: 26))
-                        .foregroundStyle(Color.brandPrimary)
+                        .foregroundStyle(palette.brandTint)
                     Text("Daily check-in")
                         .font(.themeTitleSmall())
-                        .foregroundStyle(Color.darkText)
+                        .foregroundStyle(palette.text)
                 }
 
                 if let streak = viewModel.checkinInfo?.currentStreak, streak > 0 {
@@ -166,7 +168,7 @@ struct HomeView: View {
                             .foregroundStyle(Color.reminderSoft)
                         Text("\(streak) day streak")
                             .font(.themeCaptionMedium())
-                            .foregroundStyle(Color.darkText)
+                            .foregroundStyle(palette.text)
                     }
                     .padding(.horizontal, Theme.spaceM)
                     .padding(.vertical, 6)
@@ -176,7 +178,7 @@ struct HomeView: View {
                 if viewModel.checkinInfo?.canCheckin == true {
                     Text("Tap below to check in and earn points")
                         .font(.themeCaption())
-                        .foregroundStyle(Color.lightText)
+                        .foregroundStyle(palette.mutedText)
                         .multilineTextAlignment(.center)
                 }
 
@@ -186,7 +188,7 @@ struct HomeView: View {
                     Group {
                         if viewModel.isCheckingIn {
                             ProgressView()
-                                .tint(viewModel.checkinInfo?.canCheckin == true ? Color.darkText : .white)
+                                .tint(viewModel.checkinInfo?.canCheckin == true ? palette.text : .white)
                         } else {
                             HStack(spacing: 6) {
                                 if viewModel.checkinInfo?.canCheckin != true {
@@ -196,7 +198,7 @@ struct HomeView: View {
                                 Text(checkinButtonText)
                                     .font(.themeHeadline())
                             }
-                            .foregroundStyle(viewModel.checkinInfo?.canCheckin == true ? Color.darkText : .white)
+                            .foregroundStyle(viewModel.checkinInfo?.canCheckin == true ? palette.text : .white)
                         }
                     }
                     .frame(minWidth: 140)
@@ -204,7 +206,7 @@ struct HomeView: View {
                     .padding(.vertical, Theme.spaceM)
                     .background(
                         Capsule()
-                            .fill(viewModel.checkinInfo?.canCheckin == true ? Color.successSoft : Color.brandPrimary)
+                            .fill(viewModel.checkinInfo?.canCheckin == true ? Color.successSoft : palette.brandTint)
                     )
                 }
                 .disabled(viewModel.checkinInfo?.canCheckin != true || viewModel.isCheckingIn)
@@ -213,7 +215,7 @@ struct HomeView: View {
                 if viewModel.checkinInfo?.canCheckin != true {
                     Text("Come back tomorrow for your next check-in")
                         .font(.themeCaption())
-                        .foregroundStyle(Color.mutedText)
+                        .foregroundStyle(palette.mutedText)
                         .multilineTextAlignment(.center)
                 }
 
@@ -224,7 +226,7 @@ struct HomeView: View {
                         Image(systemName: "chevron.right")
                             .font(.system(size: 11, weight: .medium))
                     }
-                    .foregroundStyle(Color.brandPrimary)
+                    .foregroundStyle(palette.brandTint)
                 }
                 .padding(.top, 4)
             }
@@ -241,45 +243,45 @@ struct HomeView: View {
     }
 
     // MARK: - Section header (centered)
-    private var moodBoosterSectionHeader: some View {
+    private func moodBoosterSectionHeader(palette: ThemePalette) -> some View {
         VStack(spacing: Theme.spaceXS) {
             HStack(spacing: Theme.spaceS) {
                 Image(systemName: "sparkles")
                     .font(.system(size: 16, weight: .medium, design: .rounded))
-                    .foregroundStyle(Color.brandPrimary)
+                    .foregroundStyle(palette.brandTint)
                 Text("Choose your mood booster")
                     .font(.themeHeadline())
-                    .foregroundStyle(Color.darkText)
+                    .foregroundStyle(palette.text)
             }
             Text("Pick the energy you need today")
                 .font(.themeCaption())
-                .foregroundStyle(Color.lightText)
+                .foregroundStyle(palette.mutedText)
         }
         .frame(maxWidth: .infinity)
         .padding(.bottom, Theme.spaceXS)
     }
 
     // MARK: - Points (soft pill, centered)
-    private var pointsPill: some View {
+    private func pointsPill(palette: ThemePalette) -> some View {
         HStack(spacing: 6) {
             Image(systemName: "star.fill")
                 .font(.system(size: 14))
-                .foregroundStyle(Color.darkText)
+                .foregroundStyle(palette.text)
             Text("\(authService.displayPoints) points")
                 .font(.themeCaptionMedium())
-                .foregroundStyle(Color.darkText)
+                .foregroundStyle(palette.text)
         }
         .padding(.horizontal, Theme.spaceM)
         .padding(.vertical, 8)
-        .background(Capsule().fill(Color.accentWarm))
+        .background(Capsule().fill(palette.accent))
     }
 
     // MARK: - Category grid (soft cards, mood energy — no "free" badge)
-    private var categoryGrid: some View {
+    private func categoryGrid(palette: ThemePalette) -> some View {
         LazyVGrid(columns: gridColumns, spacing: Theme.spaceM) {
             ForEach(ContentCategory.allCases, id: \.self) { category in
                 NavigationLink(destination: ContentDetailView(category: category)) {
-                    CategoryCard(category: category)
+                    CategoryCard(category: category, palette: palette)
                 }
                 .buttonStyle(.plain)
             }
@@ -291,6 +293,7 @@ struct HomeView: View {
 // MARK: - Category Card (soft, centered; full text, no truncation)
 private struct CategoryCard: View {
     let category: ContentCategory
+    var palette: ThemePalette
 
     var body: some View {
         VStack(alignment: .center, spacing: Theme.spaceM) {
@@ -302,13 +305,13 @@ private struct CategoryCard: View {
                 .foregroundStyle(category.color.opacity(0.9))
             Text(category.displayName)
                 .font(.themeHeadline())
-                .foregroundStyle(Color.darkText)
+                .foregroundStyle(palette.text)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
             Text(category.description)
                 .font(.themeCaption())
-                .foregroundStyle(Color.lightText)
+                .foregroundStyle(palette.mutedText)
                 .multilineTextAlignment(.center)
                 .lineLimit(3)
                 .fixedSize(horizontal: false, vertical: true)

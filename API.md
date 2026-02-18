@@ -6,6 +6,19 @@ For deployment (Nginx, PM2, PostgreSQL), see your backend repo’s deployment do
 
 ---
 
+## Table of contents
+
+| Section | Description |
+|--------|-------------|
+| [Authentication](#authentication) | JWT and headers |
+| [Rate limits](#rate-limits) | Per-path limits |
+| [Points system](#points-system-summary) | Earn and spend rules |
+| [Endpoints](#endpoints) | Health, Auth, Content, Check-in, Saved, Users, Admin, Themes |
+| [Common errors](#common-error-responses) | Status codes and error shape |
+| [Backend implementation guide](#backend-implementation-guide) | Schema, SQL, and behavior for points, feed, unlock, themes, login |
+
+---
+
 ## Authentication
 
 Most endpoints require a JWT. Send it in the request header:
@@ -29,7 +42,7 @@ When exceeded, the API returns `429` with: `{ "error": "Too many requests, pleas
 
 ---
 
-## Points system (summary)
+## Points system (summary) {#points-system-summary}
 
 MoodLift uses a single spendable balance (`points_balance`) shown everywhere in the app. All changes are recorded in `points_transactions` for history and “Recent activity”.
 
@@ -47,7 +60,7 @@ MoodLift uses a single spendable balance (`points_balance`) shown everywhere in 
 
 ---
 
-## Endpoints
+## Endpoints {#endpoints}
 
 ### Health
 
@@ -210,12 +223,58 @@ Content types: `text` | `quiz` | `qa`
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
+| GET | `/api/content/feed` | Yes | Feed of all users’ submissions (paginated) |
 | GET | `/api/content/:category` | Optional | List content by category (paginated) |
 | GET | `/api/content/:category/daily` | Yes | Get or create today’s daily content for user |
 | POST | `/api/content/submit` | Yes | Submit new content |
 | POST | `/api/content/:id/vote` | Yes | Upvote or downvote |
 | POST | `/api/content/:id/report` | Yes | Report content |
-| POST | `/api/content/:id/unlock` | Yes | Unlock content with points |
+| POST | `/api/content/:id/unlock` | Yes | Unlock content with points (5 pts; max 1 per category per day) |
+
+---
+
+#### GET `/api/content/feed`
+
+Returns the **feed** of all users’ submissions (everyone’s posts). Used by the app’s Feeds tab. Do **not** filter by the current user; the feed is shared.
+
+**Query:** `page` (default 1), `limit` (default 20), `sort` (optional, e.g. `newest`).
+
+**Success:** `200`
+
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "content_text": "...",
+      "question": null,
+      "answer": null,
+      "option_a": null,
+      "option_b": null,
+      "option_c": null,
+      "option_d": null,
+      "correct_option": null,
+      "author": "Anonymous",
+      "category": "encouragement",
+      "content_type": "text",
+      "submitted_by": "uuid",
+      "submitter_username": "johndoe",
+      "status": "active",
+      "upvotes": 0,
+      "downvotes": 0,
+      "report_count": 0,
+      "user_vote": null,
+      "is_unlocked": null,
+      "created_at": "2025-02-13T12:00:00.000Z"
+    }
+  ],
+  "total": 42,
+  "page": 1,
+  "total_pages": 3
+}
+```
+
+**Errors:** `401` if auth required and no/invalid token.
 
 ---
 
@@ -542,9 +601,16 @@ Points: **1** point on a normal day; **6** points (1 + 5 bonus) on every 5th che
     {
       "id": "uuid",
       "transaction_type": "earned",
-      "points_amount": 5,
-      "description": "Daily check-in day 7",
+      "points_amount": 1,
+      "description": "Content submission",
       "created_at": "2025-02-13T12:00:00.000Z"
+    },
+    {
+      "id": "uuid",
+      "transaction_type": "spent",
+      "points_amount": 50,
+      "description": "Unlocked theme: Ocean",
+      "created_at": "2025-02-13T11:00:00.000Z"
     }
   ],
   "total": 20,
@@ -553,7 +619,9 @@ Points: **1** point on a normal day; **6** points (1 + 5 bonus) on every 5th che
 }
 ```
 
-`transaction_type`: `earned` | `spent`. `points_amount` is positive for earned, negative for spent.
+- `transaction_type`: `earned` | `spent`.
+- `points_amount`: positive number (e.g. 1 for submit/check-in, 6 for 5-day bonus, 5 for content unlock, 50 for theme unlock).
+- `description`: human-readable label (e.g. `"Content submission"`, `"Daily check-in day 5"`, `"Unlocked content"`, `"Unlocked theme: <name>"`).
 
 ---
 
@@ -618,29 +686,47 @@ All admin routes require **Bearer token** and **admin user** (`is_admin: true`).
 
 ### Themes (`/api/themes`)
 
+The app lets users choose visual themes (e.g. Default, Ocean Blue, Midnight). Some themes are free; others are **locked** until the user spends **50 points** to unlock them (one-time per theme). Balance is deducted from `points_balance` and recorded in `points_transactions`.
+
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/api/themes` | Yes | List available themes (locked / unlocked for user) |
-| POST | `/api/themes/:id/unlock` | Yes | Unlock a theme for 50 points |
+| GET | `/api/themes` | Yes | List all themes with `is_unlocked` for the current user |
+| POST | `/api/themes/:id/unlock` | Yes | Unlock a theme for 50 points (one-time per theme) |
 
 ---
 
 #### GET `/api/themes`
 
-**Success:** `200` – list of themes, each with at least `id`, `name`, `is_unlocked` (boolean for current user), and optionally `preview_url` or display info.
+Returns every theme the app can show. Each theme includes whether the **current user** has unlocked it, so the app can show “FREE”, “LOCKED”, or “ACTIVE”.
+
+**Success:** `200`
 
 ```json
 [
-  { "id": "uuid", "name": "Ocean", "is_unlocked": false },
-  { "id": "uuid", "name": "Sunset", "is_unlocked": true }
+  { "id": "default", "name": "Default", "is_unlocked": true },
+  { "id": "ocean", "name": "Ocean Blue", "is_unlocked": true },
+  { "id": "midnight", "name": "Midnight", "is_unlocked": false },
+  { "id": "sakura", "name": "Sakura Pink", "is_unlocked": false }
 ]
 ```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| id | string | Stable theme id (e.g. `default`, `ocean`, `midnight`, `sakura`, `forest`, `sunset`, `lavender`) |
+| name | string | Display name |
+| is_unlocked | boolean | Whether the authenticated user has unlocked this theme (free themes should always be `true`) |
+
+Optional: `preview_url` or color tokens if the app needs them for preview chips.
+
+**Errors:** `401` – no or invalid token.
 
 ---
 
 #### POST `/api/themes/:id/unlock`
 
-Unlocks a **theme** for the user. Costs **50 points** (one-time per theme).
+Unlocks the theme for the authenticated user. Deducts **50 points** from `points_balance` and records a `spent` transaction (e.g. description `"Unlocked theme: <name>"`). Each theme can only be unlocked once per user.
+
+**Path:** `:id` = theme id (e.g. `midnight`, `sakura`).
 
 **Success:** `200`
 
@@ -659,7 +745,7 @@ Unlocks a **theme** for the user. Costs **50 points** (one-time per theme).
 
 ---
 
-## Common error responses
+## Common error responses {#common-error-responses}
 
 | Status | Meaning |
 |--------|--------|
@@ -684,9 +770,9 @@ Error body shape: `{ "error": "Message" }`. Some endpoints add fields (e.g. `req
 
 ---
 
-# Backend implementation guide
+# Backend implementation guide {#backend-implementation-guide}
 
-This section describes what the iOS app expects from your API and what PostgreSQL schema/SQL you need so everything works (points, feed, unlock, content submission, check-in, login identity).
+This section describes what the iOS app expects from your API and what PostgreSQL schema and logic you need so everything works: points (submit, check-in, content unlock, **theme unlock**), feed, content submission, and login identity. Implement the SQL and behavior below in your backend (e.g. Node, Python) using parameterized queries; do not run raw SQL with placeholders in production.
 
 ---
 
@@ -920,6 +1006,41 @@ When **POST /themes/:id/unlock** runs:
 
 ---
 
+## 9c. Themes: schema and GET /themes
+
+Define a small **themes** table (or config list) and a **user_themes** (or `themes_unlocked`) table so you can return all themes and whether the current user has unlocked each.
+
+**Example schema:**
+
+```sql
+-- Optional: store theme metadata (or hardcode in backend)
+CREATE TABLE IF NOT EXISTS themes (
+  id          VARCHAR(50) PRIMARY KEY,
+  name        VARCHAR(100) NOT NULL,
+  is_free     BOOLEAN NOT NULL DEFAULT false
+);
+
+-- Which themes each user has unlocked (one row per user per theme)
+CREATE TABLE IF NOT EXISTS user_themes (
+  user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  theme_id    VARCHAR(50) NOT NULL,
+  unlocked_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (user_id, theme_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_themes_user ON user_themes(user_id);
+```
+
+**GET /themes** (authenticated):
+
+- List all themes (from `themes` table or a fixed list: default, ocean, midnight, sakura, forest, sunset, lavender).
+- For each theme, set `is_unlocked = true` if the theme is free **or** there is a row in `user_themes` for (current_user_id, theme_id).
+- Return JSON array of `{ id, name, is_unlocked }`.
+
+**POST /themes/:id/unlock:** See section 9b. After deducting points and inserting the transaction, insert into `user_themes (user_id, theme_id)` so GET /themes and future unlock checks see the user as unlocked for that theme.
+
+---
+
 ## 10. Check-in: add reward and record
 
 When **POST /checkin** runs:
@@ -944,11 +1065,11 @@ When **POST /checkin** runs:
 
 | Item | Action |
 |------|--------|
-| Single balance | Use `points_balance` for profile, stats, unlock, check-in, submit. |
+| Single balance | Use `points_balance` for profile, stats, content unlock, theme unlock, check-in, submit. |
 | Submit | **POST /content/submit** → award 1 point + insert `earned` transaction every time. |
 | Check-in | 1 pt normal; 6 pts every 5th day. Return `points_earned`, `total_points`. **GET /checkin/info** return `next_points` (1 or 6). |
-| Content unlock | 5 pts each; max 1 per category per day (4/day total). Deduct 5; insert `spent` transaction. |
-| Theme unlock | 50 pts per theme (one-time). Deduct 50; insert `spent` transaction. |
+| Content unlock | 5 pts each; max 1 per category per day (4/day total). Deduct 5; insert `spent` transaction; enforce daily limit per category. |
+| Theme unlock | 50 pts per theme (one-time). **GET /themes** return all themes with `is_unlocked` per user. **POST /themes/:id/unlock** deduct 50, insert `spent` transaction, record in `user_themes`. |
 | Feed | **GET /content/feed** returns all users’ submissions (no filter by current user). Use `content` with `submitted_by IS NOT NULL` or a dedicated `feed_posts` table. |
 | Login identity | Same email/provider → same `users.id`; profile includes `points_balance` and `total_points_earned`. |
-| Transactions | Insert a row in `points_transactions` on every earn/spend. |
+| Transactions | Insert a row in `points_transactions` on every earn/spend (including theme unlock). |

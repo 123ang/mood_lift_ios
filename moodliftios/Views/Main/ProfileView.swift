@@ -1,25 +1,27 @@
 import SwiftUI
 
 struct ProfileView: View {
+    @Environment(\.themeManager) private var themeManager
     @State private var viewModel = ProfileViewModel()
     private var user: User? { AuthService.shared.currentUser }
 
     var body: some View {
+        let palette = themeManager.currentPalette
         ScrollView(showsIndicators: false) {
             VStack(spacing: 0) {
-                headerSection
+                headerSection(palette: palette)
                 VStack(spacing: Theme.spaceL) {
-                    achievementsCard
-                    myContentSection
-                    savedItemsSection
-                    recentActivitySection
+                    achievementsCard(palette: palette)
+                    myContentSection(palette: palette)
+                    savedItemsSection(palette: palette)
+                    recentActivitySection(palette: palette)
                 }
                 .padding(.horizontal, Theme.spaceM)
                 .padding(.top, Theme.spaceL)
                 .padding(.bottom, Theme.spaceXXL)
             }
         }
-        .background(Color.appBackground)
+        .background(palette.background)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             MySubmittedContentStore.shared.reloadForCurrentUser()
@@ -37,10 +39,10 @@ struct ProfileView: View {
     }
 
     // MARK: - Header (personal space feel)
-    private var headerSection: some View {
+    private func headerSection(palette: ThemePalette) -> some View {
         ZStack {
             LinearGradient(
-                colors: [Color.primaryGradientStart, Color.primaryGradientEnd],
+                colors: [palette.primaryGradientStart, palette.primaryGradientEnd],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
@@ -76,45 +78,49 @@ struct ProfileView: View {
     }
 
     // MARK: - Achievements (gentle, reflective — not analytics)
-    private var achievementsCard: some View {
+    private func achievementsCard(palette: ThemePalette) -> some View {
         SoftCard(
-            backgroundColor: Color.cardBackground,
+            backgroundColor: palette.card,
             cornerRadius: Theme.radiusLarge,
             padding: Theme.spaceL,
             useShadow: true
         ) {
             VStack(alignment: .leading, spacing: Theme.spaceM) {
-                SectionHeader(icon: "sparkles", title: "Your journey", subtitle: "Little wins add up")
+                SectionHeader(icon: "sparkles", title: "Your journey", subtitle: "Little wins add up", tint: palette.brandTint, textColor: palette.text, subtitleColor: palette.mutedText)
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: Theme.spaceM) {
                     AchievementPill(
                         icon: "flame.fill",
                         value: "\(viewModel.stats?.currentStreak ?? user?.currentStreak ?? 0)",
                         label: "Day streak",
-                        tint: .encouragementPink
+                        tint: .encouragementPink,
+                        palette: palette
                     )
                     AchievementPill(
                         icon: "calendar.badge.checkmark",
                         value: "\(viewModel.stats?.totalCheckins ?? user?.totalCheckins ?? 0)",
                         label: "Check-ins",
-                        tint: .factsGreen
+                        tint: .factsGreen,
+                        palette: palette
                     )
                     AchievementPill(
                         icon: "star.fill",
                         value: "\(AuthService.shared.displayPoints)",
                         label: "Points",
-                        tint: .inspirationYellow
+                        tint: .inspirationYellow,
+                        palette: palette
                     )
                     AchievementPill(
                         icon: "heart.fill",
                         value: "\(viewModel.stats?.totalPointsEarned ?? user?.totalPointsEarned ?? 0)",
                         label: "Total earned",
-                        tint: .jokesBlue
+                        tint: .jokesBlue,
+                        palette: palette
                     )
                 }
                 if showWelcomeBonusHint {
                     Text("Your points are from your welcome bonus for joining. Check in daily to earn more.")
                         .font(.themeCaption())
-                        .foregroundStyle(Color.lightText)
+                        .foregroundStyle(palette.mutedText)
                         .multilineTextAlignment(.center)
                         .padding(.top, Theme.spaceS)
                 }
@@ -123,7 +129,7 @@ struct ProfileView: View {
     }
 
     // MARK: - My Content (posts you shared + total likes)
-    private var myContentSection: some View {
+    private func myContentSection(palette: ThemePalette) -> some View {
         NavigationLink(destination: MyContentView()) {
             HStack(spacing: Theme.spaceM) {
                 ZStack {
@@ -137,18 +143,18 @@ struct ProfileView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("My Content")
                         .font(.themeHeadline())
-                        .foregroundStyle(Color.darkText)
+                        .foregroundStyle(palette.text)
                     Text(myContentSubtitle)
                         .font(.themeCaption())
-                        .foregroundStyle(Color.lightText)
+                        .foregroundStyle(palette.mutedText)
                 }
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color.lightText)
+                    .foregroundStyle(palette.mutedText)
             }
             .padding(Theme.spaceM)
-            .background(Color.cardBackground)
+            .background(palette.card)
             .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMedium))
             .shadow(color: Theme.cardShadow().color, radius: Theme.cardShadow().radius, y: Theme.cardShadow().y)
         }
@@ -172,32 +178,32 @@ struct ProfileView: View {
     }
 
     // MARK: - Saved items (moved from tab bar; access from Profile)
-    private var savedItemsSection: some View {
+    private func savedItemsSection(palette: ThemePalette) -> some View {
         NavigationLink(destination: SavedItemsView()) {
             HStack(spacing: Theme.spaceM) {
                 ZStack {
                     RoundedRectangle(cornerRadius: Theme.radiusMedium)
-                        .fill(Color.primarySoftLight)
+                        .fill(palette.primary.opacity(0.15))
                         .frame(width: 44, height: 44)
                     Image(systemName: "bookmark.fill")
                         .font(.system(size: 20))
-                        .foregroundStyle(Color.brandPrimary)
+                        .foregroundStyle(palette.brandTint)
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Saved Items")
                         .font(.themeHeadline())
-                        .foregroundStyle(Color.darkText)
+                        .foregroundStyle(palette.text)
                     Text("Your bookmarked content")
                         .font(.themeCaption())
-                        .foregroundStyle(Color.lightText)
+                        .foregroundStyle(palette.mutedText)
                 }
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color.lightText)
+                    .foregroundStyle(palette.mutedText)
             }
             .padding(Theme.spaceM)
-            .background(Color.cardBackground)
+            .background(palette.card)
             .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMedium))
             .shadow(color: Theme.cardShadow().color, radius: Theme.cardShadow().radius, y: Theme.cardShadow().y)
         }
@@ -205,16 +211,16 @@ struct ProfileView: View {
     }
 
     // MARK: - Recent activity (softer framing)
-    private var recentActivitySection: some View {
+    private func recentActivitySection(palette: ThemePalette) -> some View {
         VStack(alignment: .leading, spacing: Theme.spaceM) {
             HStack {
-                SectionHeader(icon: "clock.arrow.circlepath", title: "Recent activity")
+                SectionHeader(icon: "clock.arrow.circlepath", title: "Recent activity", tint: palette.brandTint, textColor: palette.text, subtitleColor: palette.mutedText)
                 Spacer()
                 if !viewModel.recentTransactions.isEmpty {
                     NavigationLink(destination: RecentActivityView()) {
                         Text("View all")
                             .font(.themeCaptionMedium())
-                            .foregroundStyle(Color.brandPrimary)
+                            .foregroundStyle(palette.brandTint)
                     }
                 }
             }
@@ -223,47 +229,47 @@ struct ProfileView: View {
                 HStack {
                     Spacer()
                     ProgressView()
-                        .tint(Color.brandPrimary)
+                        .tint(palette.brandTint)
                         .padding(.vertical, Theme.spaceXL)
                     Spacer()
                 }
             } else if viewModel.recentTransactions.isEmpty {
-                emptyActivityState
+                emptyActivityState(palette: palette)
             } else {
                 VStack(spacing: 0) {
                     ForEach(Array(viewModel.recentTransactions.prefix(5).enumerated()), id: \.element.id) { index, transaction in
-                        TransactionRow(transaction: transaction)
+                        TransactionRow(transaction: transaction, palette: palette)
                         if index < min(viewModel.recentTransactions.count, 5) - 1 {
                             Rectangle()
-                                .fill(Color.borderColor.opacity(0.15))
+                                .fill(palette.border.opacity(0.15))
                                 .frame(height: 1)
                                 .padding(.leading, 52)
                         }
                     }
                 }
                 .padding(.vertical, Theme.spaceS)
-                .background(Color.cardBackground)
+                .background(palette.card)
                 .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMedium))
                 .shadow(color: Theme.cardShadow().color, radius: Theme.cardShadow().radius, y: Theme.cardShadow().y)
             }
         }
     }
 
-    private var emptyActivityState: some View {
+    private func emptyActivityState(palette: ThemePalette) -> some View {
         VStack(spacing: Theme.spaceS) {
             Image(systemName: "leaf")
                 .font(.system(size: 36))
                 .foregroundStyle(Color.supportMint.opacity(0.7))
             Text("No recent activity")
                 .font(.themeCallout())
-                .foregroundStyle(Color.lightText)
+                .foregroundStyle(palette.mutedText)
             Text("Check in daily to start your journey")
                 .font(.themeCaption())
-                .foregroundStyle(Color.mutedText)
+                .foregroundStyle(palette.mutedText)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, Theme.spaceXL)
-        .background(Color.cardBackground)
+        .background(palette.card)
         .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMedium))
         .shadow(color: Theme.cardShadow().color, radius: Theme.cardShadow().radius, y: Theme.cardShadow().y)
     }
@@ -280,6 +286,7 @@ private struct AchievementPill: View {
     let value: String
     let label: String
     let tint: Color
+    var palette: ThemePalette
 
     var body: some View {
         VStack(spacing: Theme.spaceS) {
@@ -288,10 +295,10 @@ private struct AchievementPill: View {
                 .foregroundStyle(tint)
             Text(value)
                 .font(.themeTitleSmall())
-                .foregroundStyle(Color.darkText)
+                .foregroundStyle(palette.text)
             Text(label)
                 .font(.themeCaption())
-                .foregroundStyle(Color.lightText)
+                .foregroundStyle(palette.mutedText)
                 .lineLimit(1)
         }
         .frame(maxWidth: .infinity)
@@ -305,6 +312,7 @@ private struct AchievementPill: View {
 // MARK: - Transaction row (warm glow for earned, gentle for spent)
 private struct TransactionRow: View {
     let transaction: PointsTransaction
+    var palette: ThemePalette
 
     var body: some View {
         HStack(spacing: Theme.spaceM) {
@@ -319,12 +327,12 @@ private struct TransactionRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(transaction.description ?? "Transaction")
                     .font(.themeCallout())
-                    .foregroundStyle(Color.darkText)
+                    .foregroundStyle(palette.text)
                     .lineLimit(2)
                 if let date = transaction.createdAt {
                     Text(date.formatted(.relative(presentation: .named)))
                         .font(.themeCaption())
-                        .foregroundStyle(Color.lightText)
+                        .foregroundStyle(palette.mutedText)
                 }
             }
             Spacer()

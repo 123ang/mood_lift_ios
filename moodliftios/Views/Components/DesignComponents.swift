@@ -109,6 +109,9 @@ struct SectionHeader: View {
     var icon: String? = nil
     let title: String
     var subtitle: String? = nil
+    var tint: Color = Color.brandPrimary
+    var textColor: Color = Color.darkText
+    var subtitleColor: Color = Color.lightText
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.spaceXS) {
@@ -116,16 +119,16 @@ struct SectionHeader: View {
                 if let icon = icon {
                     Image(systemName: icon)
                         .font(.system(size: 16, weight: .medium, design: .rounded))
-                        .foregroundStyle(Color.brandPrimary)
+                        .foregroundStyle(tint)
                 }
                 Text(title)
                     .font(.themeHeadline())
-                    .foregroundStyle(Color.darkText)
+                    .foregroundStyle(textColor)
             }
             if let subtitle = subtitle {
                 Text(subtitle)
                     .font(.themeCaption())
-                    .foregroundStyle(Color.lightText)
+                    .foregroundStyle(subtitleColor)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

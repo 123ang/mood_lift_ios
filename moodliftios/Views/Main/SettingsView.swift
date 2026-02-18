@@ -1,27 +1,23 @@
 import SwiftUI
 
 struct SettingsView: View {
+    @Environment(\.themeManager) private var themeManager
     @State private var viewModel = SettingsViewModel()
     @State private var showSignOutAlert = false
     @State private var showPrivacyPolicy = false
     @State private var showTermsOfService = false
+    @State private var showThemePicker = false
     @State private var reminderDate = Date()
 
-    private var headerGradient: LinearGradient {
-        LinearGradient(
-            colors: [Color.primaryGradientStart, Color.primaryGradientEnd],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-    }
-
     var body: some View {
+        let palette = themeManager.currentPalette
         ZStack {
-            Color.appBackground.ignoresSafeArea()
+            palette.background.ignoresSafeArea()
             VStack(spacing: 0) {
-                headerBar
+                headerBar(palette: palette)
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: Theme.spaceL) {
+                        themeCard
                         notificationsCard
                         accountCard
                         supportCard
@@ -39,6 +35,7 @@ struct SettingsView: View {
             viewModel.loadSettings()
             updateReminderDate()
         }
+        .sheet(isPresented: $showThemePicker) { ThemePickerView() }
         .sheet(isPresented: $viewModel.showChangePassword) { changePasswordSheet }
         .sheet(isPresented: $showPrivacyPolicy) { legalSheet(title: "Privacy Policy", content: privacyPolicyText) }
         .sheet(isPresented: $showTermsOfService) { legalSheet(title: "Terms of Service", content: termsOfServiceText) }
@@ -61,7 +58,7 @@ struct SettingsView: View {
     }
 
     // MARK: - Header (comfort, not config)
-    private var headerBar: some View {
+    private func headerBar(palette: ThemePalette) -> some View {
         HStack(spacing: Theme.spaceM) {
             Image(systemName: "gearshape.fill")
                 .font(.system(size: 20, weight: .medium, design: .rounded))
@@ -73,22 +70,84 @@ struct SettingsView: View {
         }
         .padding(.horizontal, Theme.spaceM)
         .padding(.vertical, Theme.spaceM)
-        .background(headerGradient)
+        .background(
+            LinearGradient(
+                colors: [palette.primaryGradientStart, palette.primaryGradientEnd],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+    }
+
+    // MARK: - Theme / Appearance
+    private var themeCard: some View {
+        let palette = themeManager.currentPalette
+        return VStack(alignment: .leading, spacing: 0) {
+            SectionHeader(icon: "paintpalette.fill", title: "Theme", subtitle: "Appearance", tint: palette.brandTint, textColor: palette.text, subtitleColor: palette.mutedText)
+            VStack(alignment: .leading, spacing: Theme.spaceM) {
+                HStack(spacing: Theme.spaceS) {
+                    Text("Current theme")
+                        .font(.themeCaptionMedium())
+                        .foregroundStyle(palette.mutedText)
+                    Spacer()
+                    Text(themeManager.currentTheme.name)
+                        .font(.themeBodyMedium())
+                        .foregroundStyle(palette.text)
+                }
+                HStack(spacing: 6) {
+                    ForEach(Array(palette.previewColors.prefix(5).enumerated()), id: \.offset) { _, color in
+                        Circle()
+                            .fill(color)
+                            .frame(width: 20, height: 20)
+                            .overlay(Circle().stroke(palette.border.opacity(0.4), lineWidth: 1))
+                    }
+                }
+                Button {
+                    showThemePicker = true
+                } label: {
+                    HStack {
+                        Image(systemName: "paintbrush.fill")
+                            .font(.system(size: 16))
+                            .foregroundStyle(palette.brandTint)
+                            .frame(width: 28)
+                        Text("Change Theme")
+                            .font(.themeBodyMedium())
+                            .foregroundStyle(palette.text)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(palette.mutedText)
+                    }
+                    .padding(.horizontal, Theme.spaceM)
+                    .padding(.vertical, Theme.spaceM)
+                }
+                .buttonStyle(.plain)
+                Text("Choose a theme. Locked themes can be unlocked.")
+                    .font(.themeCaption())
+                    .foregroundStyle(palette.mutedText)
+            }
+            .padding(Theme.spaceM)
+            .background(palette.card)
+            .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMedium))
+            .shadow(color: Theme.cardShadow().color, radius: Theme.cardShadow().radius, y: Theme.cardShadow().y)
+        }
+        .padding(.top, Theme.spaceM)
     }
 
     // MARK: - Notifications & reminders (grouped soft card)
     private var notificationsCard: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            SectionHeader(icon: "bell.fill", title: "Notifications & reminders", subtitle: "When to nudge you")
+        let palette = themeManager.currentPalette
+        return VStack(alignment: .leading, spacing: 0) {
+            SectionHeader(icon: "bell.fill", title: "Notifications & reminders", subtitle: "When to nudge you", tint: palette.brandTint, textColor: palette.text, subtitleColor: palette.mutedText)
             VStack(spacing: 0) {
                 HStack {
                     Image(systemName: "bell.badge.fill")
                         .font(.system(size: 16))
-                        .foregroundStyle(Color.brandPrimary)
+                        .foregroundStyle(palette.brandTint)
                         .frame(width: 28)
                     Text("Push notifications")
                         .font(.themeBodyMedium())
-                        .foregroundStyle(Color.darkText)
+                        .foregroundStyle(palette.text)
                     Spacer()
                     Toggle("", isOn: Binding(
                         get: { viewModel.notificationsEnabled },
@@ -101,17 +160,17 @@ struct SettingsView: View {
 
                 if viewModel.notificationsEnabled {
                     Rectangle()
-                        .fill(Color.borderColor.opacity(0.12))
+                        .fill(palette.border.opacity(0.12))
                         .frame(height: 1)
                         .padding(.leading, 56)
                     HStack {
                         Image(systemName: "clock.fill")
                             .font(.system(size: 16))
-                            .foregroundStyle(Color.brandPrimary)
+                            .foregroundStyle(palette.brandTint)
                             .frame(width: 28)
                         Text("Daily reminder")
                             .font(.themeBodyMedium())
-                            .foregroundStyle(Color.darkText)
+                            .foregroundStyle(palette.text)
                         Spacer()
                         DatePicker("", selection: $reminderDate, displayedComponents: .hourAndMinute)
                             .labelsHidden()
@@ -126,7 +185,7 @@ struct SettingsView: View {
                     .padding(.vertical, Theme.spaceS + 2)
                 }
             }
-            .background(Color.cardBackground)
+            .background(palette.card)
             .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMedium))
             .shadow(color: Theme.cardShadow().color, radius: Theme.cardShadow().radius, y: Theme.cardShadow().y)
         }
@@ -135,29 +194,30 @@ struct SettingsView: View {
 
     // MARK: - Account (grouped)
     private var accountCard: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            SectionHeader(icon: "person.fill", title: "Account")
+        let palette = themeManager.currentPalette
+        return VStack(alignment: .leading, spacing: 0) {
+            SectionHeader(icon: "person.fill", title: "Account", tint: palette.brandTint, textColor: palette.text, subtitleColor: palette.mutedText)
             Button {
                 viewModel.showChangePassword = true
             } label: {
                 HStack {
                     Image(systemName: "lock.fill")
                         .font(.system(size: 16))
-                        .foregroundStyle(Color.brandPrimary)
+                        .foregroundStyle(palette.brandTint)
                         .frame(width: 28)
                     Text("Change password")
                         .font(.themeBodyMedium())
-                        .foregroundStyle(Color.darkText)
+                        .foregroundStyle(palette.text)
                     Spacer()
                     Image(systemName: "chevron.right")
                         .font(.caption.weight(.medium))
-                        .foregroundStyle(Color.lightText)
+                        .foregroundStyle(palette.mutedText)
                 }
                 .padding(.horizontal, Theme.spaceM)
                 .padding(.vertical, Theme.spaceM)
             }
             .buttonStyle(.plain)
-            .background(Color.cardBackground)
+            .background(palette.card)
             .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMedium))
             .shadow(color: Theme.cardShadow().color, radius: Theme.cardShadow().radius, y: Theme.cardShadow().y)
         }
@@ -165,19 +225,20 @@ struct SettingsView: View {
 
     // MARK: - Support & legal (grouped)
     private var supportCard: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            SectionHeader(icon: "questionmark.circle.fill", title: "Support & legal")
+        let palette = themeManager.currentPalette
+        return VStack(alignment: .leading, spacing: 0) {
+            SectionHeader(icon: "questionmark.circle.fill", title: "Support & legal", tint: palette.brandTint, textColor: palette.text, subtitleColor: palette.mutedText)
             VStack(spacing: 0) {
-                Button { showPrivacyPolicy = true } label: { settingsRow(icon: "hand.raised.fill", title: "Privacy Policy") }
+                Button { showPrivacyPolicy = true } label: { settingsRow(icon: "hand.raised.fill", title: "Privacy Policy", palette: palette) }
                 .buttonStyle(.plain)
                 Rectangle()
-                    .fill(Color.borderColor.opacity(0.12))
+                    .fill(palette.border.opacity(0.12))
                     .frame(height: 1)
                     .padding(.leading, 56)
-                Button { showTermsOfService = true } label: { settingsRow(icon: "doc.text.fill", title: "Terms of Service") }
+                Button { showTermsOfService = true } label: { settingsRow(icon: "doc.text.fill", title: "Terms of Service", palette: palette) }
                 .buttonStyle(.plain)
             }
-            .background(Color.cardBackground)
+            .background(palette.card)
             .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMedium))
             .shadow(color: Theme.cardShadow().color, radius: Theme.cardShadow().radius, y: Theme.cardShadow().y)
         }
@@ -185,24 +246,25 @@ struct SettingsView: View {
 
     // MARK: - About
     private var aboutCard: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            SectionHeader(icon: "heart.fill", title: "About")
+        let palette = themeManager.currentPalette
+        return VStack(alignment: .leading, spacing: 0) {
+            SectionHeader(icon: "heart.fill", title: "About", tint: palette.brandTint, textColor: palette.text, subtitleColor: palette.mutedText)
             HStack {
                 Image(systemName: "heart.fill")
                     .font(.system(size: 16))
-                    .foregroundStyle(Color.encouragementPink)
+                    .foregroundStyle(palette.accent)
                     .frame(width: 28)
                 Text("App version")
                     .font(.themeBodyMedium())
-                    .foregroundStyle(Color.darkText)
+                    .foregroundStyle(palette.text)
                 Spacer()
                 Text("1.0.0")
                     .font(.themeCallout())
-                    .foregroundStyle(Color.lightText)
+                    .foregroundStyle(palette.mutedText)
             }
             .padding(.horizontal, Theme.spaceM)
             .padding(.vertical, Theme.spaceM)
-            .background(Color.cardBackground)
+            .background(palette.card)
             .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMedium))
             .shadow(color: Theme.cardShadow().color, radius: Theme.cardShadow().radius, y: Theme.cardShadow().y)
         }
@@ -210,7 +272,8 @@ struct SettingsView: View {
 
     // MARK: - Sign out (soft primary style)
     private var signOutButton: some View {
-        Button { showSignOutAlert = true } label: {
+        let palette = themeManager.currentPalette
+        return Button { showSignOutAlert = true } label: {
             HStack(spacing: Theme.spaceS) {
                 Image(systemName: "rectangle.portrait.and.arrow.right")
                     .font(.system(size: 16, weight: .medium, design: .rounded))
@@ -220,26 +283,32 @@ struct SettingsView: View {
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
             .padding(.vertical, Theme.spaceM)
-            .background(headerGradient)
+            .background(
+                LinearGradient(
+                    colors: [palette.primaryGradientStart, palette.primaryGradientEnd],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
             .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMedium))
-            .shadow(color: Color.primarySoft.opacity(0.2), radius: 6, y: 3)
+            .shadow(color: palette.primary.opacity(0.2), radius: 6, y: 3)
         }
         .padding(.top, Theme.spaceS)
     }
 
-    private func settingsRow(icon: String, title: String) -> some View {
+    private func settingsRow(icon: String, title: String, palette: ThemePalette) -> some View {
         HStack {
             Image(systemName: icon)
                 .font(.system(size: 16))
-                .foregroundStyle(Color.brandPrimary)
+                .foregroundStyle(palette.brandTint)
                 .frame(width: 28)
             Text(title)
                 .font(.themeBodyMedium())
-                .foregroundStyle(Color.darkText)
+                .foregroundStyle(palette.text)
             Spacer()
             Image(systemName: "chevron.right")
                 .font(.caption.weight(.medium))
-                .foregroundStyle(Color.lightText)
+                .foregroundStyle(palette.mutedText)
         }
         .padding(.horizontal, Theme.spaceM)
         .padding(.vertical, Theme.spaceM)

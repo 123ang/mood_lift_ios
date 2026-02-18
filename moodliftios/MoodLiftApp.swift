@@ -17,6 +17,7 @@ struct MoodLiftApp: App {
                     }
                 }
             }
+            .environment(\.themeManager, ThemeManager.shared)
             .animation(.easeInOut(duration: 0.4), value: authService.isAuthenticated)
             .animation(.easeInOut(duration: 0.3), value: authService.isLoading)
         }

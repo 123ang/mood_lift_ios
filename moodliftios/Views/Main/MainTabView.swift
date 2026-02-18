@@ -1,9 +1,11 @@
 import SwiftUI
 
 struct MainTabView: View {
+    @Environment(\.themeManager) private var themeManager
     @State private var selectedTab = 0
 
     var body: some View {
+        let palette = themeManager.currentPalette
         TabView(selection: $selectedTab) {
             NavigationStack {
                 HomeView()
@@ -37,8 +39,8 @@ struct MainTabView: View {
                 Label("Settings", systemImage: "gearshape.fill")
             }
         }
-        .tint(.brandPrimary)
-        .toolbarBackground(Color.appBackground, for: .tabBar)
+        .tint(palette.brandTint)
+        .toolbarBackground(palette.background, for: .tabBar)
         .toolbarBackground(.visible, for: .tabBar)
     }
 }
