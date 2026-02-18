@@ -3,6 +3,9 @@ import SwiftUI
 struct MyContentView: View {
     @State private var viewModel = ProfileViewModel()
     @State private var selectedItem: ContentItem?
+    @State private var itemToRemove: ContentItem?
+    @State private var showRemoveAlert = false
+    private let mySubmittedStore = MySubmittedContentStore.shared
 
     private var headerGradient: LinearGradient {
         LinearGradient(
@@ -32,9 +35,10 @@ struct MyContentView: View {
                 ScrollView(showsIndicators: false) {
                     LazyVStack(spacing: Theme.spaceM) {
                         ForEach(viewModel.myContent) { item in
-                            MyContentRow(item: item) {
-                                selectedItem = item
-                            }
+                            MyContentRow(item: item, onTap: { selectedItem = item }, onRemove: {
+                                itemToRemove = item
+                                showRemoveAlert = true
+                            })
                         }
                     }
                     .padding(.horizontal, Theme.spaceM)
@@ -50,6 +54,20 @@ struct MyContentView: View {
         .refreshable { await viewModel.loadMyContent() }
         .sheet(item: $selectedItem) { item in
             MyContentDetailSheet(item: item)
+        }
+        .alert("Remove from My Content?", isPresented: $showRemoveAlert) {
+            Button("Cancel", role: .cancel) {
+                itemToRemove = nil
+            }
+            Button("Remove", role: .destructive) {
+                if let item = itemToRemove {
+                    mySubmittedStore.remove(contentId: item.id, userId: AuthService.shared.currentUser?.id)
+                    Task { await viewModel.loadMyContent() }
+                }
+                itemToRemove = nil
+            }
+        } message: {
+            Text("This will remove the post from your list. It may still appear in the feed if it was published.")
         }
     }
 
@@ -101,10 +119,11 @@ struct MyContentView: View {
     }
 }
 
-// MARK: - Row: preview + likes, tappable
+// MARK: - Row: preview + likes, tappable + remove
 private struct MyContentRow: View {
     let item: ContentItem
     let onTap: () -> Void
+    let onRemove: () -> Void
 
     private var categoryColor: Color {
         (ContentCategory(rawValue: item.category) ?? .encouragement).color
@@ -115,59 +134,69 @@ private struct MyContentRow: View {
     }
 
     var body: some View {
-        Button(action: onTap) {
-            HStack(alignment: .top, spacing: Theme.spaceM) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: Theme.radiusMedium)
-                        .fill(categoryColor.opacity(0.2))
-                        .frame(width: 48, height: 48)
-                    Image(systemName: "text.quote")
-                        .font(.system(size: 20, weight: .medium))
-                        .foregroundStyle(categoryColor)
-                }
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(item.displayText)
-                        .font(.themeCallout())
-                        .foregroundStyle(Color.darkText)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.leading)
-                    HStack(spacing: Theme.spaceS) {
-                        Text(categoryName)
-                            .font(.themeCaptionMedium())
+        HStack(alignment: .top, spacing: Theme.spaceS) {
+            Button(action: onTap) {
+                HStack(alignment: .top, spacing: Theme.spaceM) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: Theme.radiusMedium)
+                            .fill(categoryColor.opacity(0.2))
+                            .frame(width: 48, height: 48)
+                        Image(systemName: "text.quote")
+                            .font(.system(size: 20, weight: .medium))
                             .foregroundStyle(categoryColor)
-                        if let date = item.createdAt {
-                            Text("·")
-                                .foregroundStyle(Color.mutedText)
-                            Text(date.formatted(.relative(presentation: .named)))
-                                .font(.themeCaption())
-                                .foregroundStyle(Color.lightText)
+                    }
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(item.displayText)
+                            .font(.themeCallout())
+                            .foregroundStyle(Color.darkText)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+                        HStack(spacing: Theme.spaceS) {
+                            Text(categoryName)
+                                .font(.themeCaptionMedium())
+                                .foregroundStyle(categoryColor)
+                            if let date = item.createdAt {
+                                Text("·")
+                                    .foregroundStyle(Color.mutedText)
+                                Text(date.formatted(.relative(presentation: .named)))
+                                    .font(.themeCaption())
+                                    .foregroundStyle(Color.lightText)
+                            }
                         }
                     }
-                }
-                Spacer(minLength: Theme.spaceS)
-                VStack(alignment: .trailing, spacing: 2) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "hand.thumbsup.fill")
-                            .font(.system(size: 12))
-                            .foregroundStyle(categoryColor)
-                        Text("\(item.score)")
-                            .font(.themeHeadline())
-                            .foregroundStyle(Color.darkText)
+                    Spacer(minLength: Theme.spaceS)
+                    VStack(alignment: .trailing, spacing: 2) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "hand.thumbsup.fill")
+                                .font(.system(size: 12))
+                                .foregroundStyle(categoryColor)
+                            Text("\(item.score)")
+                                .font(.themeHeadline())
+                                .foregroundStyle(Color.darkText)
+                        }
+                        Text("likes")
+                            .font(.themeCaption())
+                            .foregroundStyle(Color.lightText)
                     }
-                    Text("likes")
-                        .font(.themeCaption())
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(Color.lightText)
                 }
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color.lightText)
             }
-            .padding(Theme.spaceM)
-            .background(Color.cardBackground)
-            .clipShape(RoundedRectangle(cornerRadius: Theme.radiusLarge))
-            .shadow(color: Theme.cardShadow().color, radius: Theme.cardShadow().radius, y: Theme.cardShadow().y)
+            .buttonStyle(.plain)
+
+            Button(action: onRemove) {
+                Image(systemName: "trash")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(Color.errorSoft)
+                    .frame(width: 44, height: 44)
+            }
+            .buttonStyle(.plain)
         }
-        .buttonStyle(.plain)
+        .padding(Theme.spaceM)
+        .background(Color.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: Theme.radiusLarge))
+        .shadow(color: Theme.cardShadow().color, radius: Theme.cardShadow().radius, y: Theme.cardShadow().y)
     }
 }
 

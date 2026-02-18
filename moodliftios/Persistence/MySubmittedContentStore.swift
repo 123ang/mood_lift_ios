@@ -45,6 +45,15 @@ final class MySubmittedContentStore {
         save(userId: userId)
     }
 
+    /// Remove a submission from the current user's list (e.g. "Remove" in My Content). Persists immediately.
+    func remove(contentId: String, userId: String?) {
+        guard let userId = userId else { return }
+        var list = storage[userId] ?? []
+        list.removeAll { $0.id == contentId }
+        storage[userId] = list
+        save(userId: userId)
+    }
+
     private func key(userId: String) -> String {
         keyPrefix + userId
     }

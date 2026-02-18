@@ -15,15 +15,11 @@ class PointsService {
         return try APIDecoder.decode(UserStats.self, from: data)
     }
     
-    // Local calculation helpers
-    static func calculateDailyPoints(streak: Int) -> Int {
-        if streak <= 6 { return 1 }
-        let points = Int(round(Double(5) / 7.0 * Double(streak)))
-        // Check 30-day bonus
-        if streak % 30 == 0 {
-            return points + 10
-        }
-        return points
+    /// Next check-in points: 1 on normal days, 6 on every 5th day (1 + 5 bonus). Backend should use the same rule.
+    static func calculateNextCheckinPoints(totalCheckins: Int) -> Int {
+        let nextDay = totalCheckins + 1
+        if nextDay % 5 == 0 { return Constants.dailyCheckinBasePoints + Constants.everyFiveDaysBonusPoints }
+        return Constants.dailyCheckinBasePoints
     }
     
     static func getUnlockCost(totalUnlocks: Int) -> Int {

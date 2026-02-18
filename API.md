@@ -29,6 +29,24 @@ When exceeded, the API returns `429` with: `{ "error": "Too many requests, pleas
 
 ---
 
+## Points system (summary)
+
+MoodLift uses a single spendable balance (`points_balance`) shown everywhere in the app. All changes are recorded in `points_transactions` for history and “Recent activity”.
+
+| Action | Points | Notes |
+|--------|--------|--------|
+| **Submit content** | **+1** | Every time the user submits a post. |
+| **Daily check-in** | **+1** | Once per calendar day. |
+| **Every 5th check-in day** | **+6** | Days 5, 10, 15, 20, … get 1 base + 5 bonus. |
+| **Unlock content** | **−5** | Cost per locked item. Max **1 unlock per category per day** (4 categories → max **4 content unlocks per day**). |
+| **Unlock theme** | **−50** | Cost per theme. One-time unlock per theme. |
+| **Welcome / signup** | **+5** | Optional one-time bonus. |
+
+**Check-in rule:** Normal day → **1** point. If the check-in is the user’s 5th, 10th, 15th, … day → **6** points.  
+**GET /checkin/info** returns `next_points`: **1** or **6** (6 when the next check-in would be a 5th/10th/15th/… day).
+
+---
+
 ## Endpoints
 
 ### Health
@@ -385,7 +403,9 @@ For quiz/qa, set `question`, `answer`, and options as needed. `content_type` def
 
 #### POST `/api/content/:id/unlock`
 
-Unlocks content for the user. First unlock costs 5 points; each additional unlock costs 15 points.
+Unlocks **content** for the user. Each unlock costs **5 points** (deducted from `points_balance`).
+
+**Limit:** The user may unlock at most **1 content per category per day** (categories: `encouragement`, `inspiration`, `jokes`, `facts`). So at most **4 content unlocks per day** in total.
 
 **Success:** `200`
 
@@ -397,7 +417,10 @@ Unlocks content for the user. First unlock costs 5 points; each additional unloc
 }
 ```
 
-**Errors:** `400` – already unlocked, or `{ "error": "Not enough points", "required": 15, "balance": 5 }`.
+**Errors:**  
+- `400` – already unlocked for this user.  
+- `400` – daily limit reached for this category: `{ "error": "Daily unlock limit reached for this category", "category": "encouragement" }`.  
+- `400` – not enough points: `{ "error": "Not enough points", "required": 5, "balance": 2 }`.
 
 ---
 
@@ -424,7 +447,7 @@ Unlocks content for the user. First unlock costs 5 points; each additional unloc
 }
 ```
 
-Points: 1 point for streaks 1–6 days; from day 7, `round((5/7) * streak)`; +10 bonus every 30 days.
+Points: **1** point on a normal day; **6** points (1 + 5 bonus) on every 5th check-in day (5, 10, 15, 20, …). Return `next_points`: 1 or 6 (6 when `total_checkins + 1` is divisible by 5).
 
 ---
 
@@ -435,11 +458,13 @@ Points: 1 point for streaks 1–6 days; from day 7, `round((5/7) * streak)`; +10
 ```json
 {
   "message": "Check-in successful",
-  "points_earned": 2,
+  "points_earned": 1,
   "new_streak": 4,
   "total_points": 17
 }
 ```
+
+`points_earned` is **1** on normal days, **6** on every 5th day (5, 10, 15, …).
 
 **Errors:** `400` – already checked in today.
 
@@ -591,6 +616,49 @@ All admin routes require **Bearer token** and **admin user** (`is_admin: true`).
 
 ---
 
+### Themes (`/api/themes`)
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/themes` | Yes | List available themes (locked / unlocked for user) |
+| POST | `/api/themes/:id/unlock` | Yes | Unlock a theme for 50 points |
+
+---
+
+#### GET `/api/themes`
+
+**Success:** `200` – list of themes, each with at least `id`, `name`, `is_unlocked` (boolean for current user), and optionally `preview_url` or display info.
+
+```json
+[
+  { "id": "uuid", "name": "Ocean", "is_unlocked": false },
+  { "id": "uuid", "name": "Sunset", "is_unlocked": true }
+]
+```
+
+---
+
+#### POST `/api/themes/:id/unlock`
+
+Unlocks a **theme** for the user. Costs **50 points** (one-time per theme).
+
+**Success:** `200`
+
+```json
+{
+  "message": "Theme unlocked",
+  "points_spent": 50,
+  "remaining_balance": 20
+}
+```
+
+**Errors:**  
+- `400` – theme already unlocked for this user.  
+- `400` – not enough points: `{ "error": "Not enough points", "required": 50, "balance": 30 }`.  
+- `404` – theme not found.
+
+---
+
 ## Common error responses
 
 | Status | Meaning |
@@ -613,3 +681,274 @@ Error body shape: `{ "error": "Message" }`. Some endpoints add fields (e.g. `req
 - `Invalid token` – malformed or wrong secret.
 - `Token expired` – JWT expired; user must log in again.
 - `User not found` – token valid but user was deleted.
+
+---
+
+# Backend implementation guide
+
+This section describes what the iOS app expects from your API and what PostgreSQL schema/SQL you need so everything works (points, feed, unlock, content submission, check-in, login identity).
+
+---
+
+## 1. Points system (critical)
+
+The app shows **one** “Points” value everywhere. Use a **single spendable balance** (`points_balance`) and record all changes in `points_transactions`.
+
+**Points rules:**
+
+| Event | Points |
+|-------|--------|
+| **Submit content** | **1** per submission |
+| **Daily check-in** | **1** per day |
+| **Every 5th check-in day** (5, 10, 15, 20, …) | **1 + 5 = 6** that day |
+| **Unlock content** | **−5** per unlock; max **1 per category per day** (4 categories → max 4 content unlocks/day) |
+| **Unlock theme** | **−50** per theme (one-time per theme) |
+| **Welcome/signup** | **5** (optional) |
+
+- **GET /auth/profile** and **GET /users/stats** must return `points_balance` and `total_points_earned`.
+- **POST /content/:id/unlock** must check balance ≥ 5, enforce **1 unlock per category per day** (per user), deduct 5, and record transaction.
+- **POST /themes/:id/unlock** must check balance ≥ 50, deduct 50, and record transaction (one-time per theme per user).
+- **GET /checkin/info** must return `next_points`: **1** normally, **6** when `(total_checkins + 1) % 5 == 0`.
+- **POST /checkin** must award 1 or 6, update balance, and insert an `earned` transaction.
+- **POST /content/submit** must award 1, update balance, and insert an `earned` transaction.
+
+---
+
+## 2. Content vs feed (tables)
+
+**Option A – Two tables**
+
+| Table | Purpose | Who writes |
+|-------|---------|------------|
+| **`content`** | Curated, unlockable content (daily, categories) | Admin only |
+| **`feed_posts`** | User submissions for the feed | Users via submit |
+
+- User submit → INSERT into **`feed_posts`** only.
+- **GET /content/feed** → SELECT from **`feed_posts`** only.
+
+**Option B – Single `content` table**
+
+- **Feed:** return rows where **`submitted_by IS NOT NULL`** (everyone’s posts). Do **not** filter by current user.
+- **My Content (GET /content/mine):** return rows where **`submitted_by` = current user id**.
+
+---
+
+## 3. Feed table and API (if using feed_posts)
+
+Create the feed table:
+
+```sql
+CREATE TABLE IF NOT EXISTS feed_posts (
+  id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  content_text      TEXT,
+  question          TEXT,
+  answer            TEXT,
+  option_a          TEXT,
+  option_b          TEXT,
+  option_c          TEXT,
+  option_d          TEXT,
+  correct_option    VARCHAR(1),
+  author            TEXT,
+  category          VARCHAR(50) NOT NULL,
+  content_type      VARCHAR(20) NOT NULL,
+  submitted_by      UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  submitter_username VARCHAR(255),
+  status            VARCHAR(20) NOT NULL DEFAULT 'visible',
+  upvotes           INT NOT NULL DEFAULT 0,
+  downvotes         INT NOT NULL DEFAULT 0,
+  report_count      INT NOT NULL DEFAULT 0,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_feed_posts_created_at ON feed_posts(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_feed_posts_submitted_by ON feed_posts(submitted_by);
+```
+
+**GET /content/feed** must return `{ "data": [...], "total", "page", "total_pages" }`. If you use the **`content`** table for feed instead, use the query in the next section.
+
+---
+
+## 4. GET /content/feed fix (single content table)
+
+If **GET /content/feed** returns empty but **GET /content/:category** returns rows, the feed handler is likely using the wrong query or DB.
+
+**Data query (use exactly this):**
+
+```sql
+SELECT id, content_text, question, answer,
+       option_a, option_b, option_c, option_d, correct_option,
+       author, category, content_type,
+       submitted_by, submitter_username,
+       status, upvotes, downvotes, report_count,
+       created_at
+FROM public.content
+WHERE status = 'active' AND submitted_by IS NOT NULL
+ORDER BY created_at DESC
+LIMIT $1 OFFSET $2;
+```
+
+Params: `$1` = limit (e.g. 20), `$2` = (page − 1) × limit.
+
+**Count query:**
+
+```sql
+SELECT COUNT(*) FROM public.content
+WHERE status = 'active' AND submitted_by IS NOT NULL;
+```
+
+- **Do not** filter by current user id. Feed = everyone’s posts.
+- Response: `{ "data": [...], "total": N, "page": 1, "total_pages": ceil(total/limit) }`.
+
+---
+
+## 5. Login identity (same user, same row)
+
+**Bug:** After logout/login, points or “my content” disappear.
+
+**Cause:** Same person gets a different `users.id` per login, or profile does not return `points_balance` / `total_points_earned`.
+
+**Fix:**
+
+- One row per identity: **UNIQUE(email)** and/or **UNIQUE(provider, provider_user_id)**. On login/signup, find by email (or provider+uid); do not create a new row each time (use UPSERT or find-then-return).
+- **GET /auth/profile** (and login response `user`) must include **points_balance** and **total_points_earned** from the DB.
+- Log the resolved `users.id` in login, signup, and profile so you can confirm it is stable.
+
+**Profile SELECT example:**
+
+```sql
+SELECT id, email, username, points_balance, total_points_earned,
+       current_streak, last_checkin, total_checkins,
+       notification_time, notifications_enabled, is_admin, created_at
+FROM public.users
+WHERE id = $1;
+```
+
+---
+
+## 6. Points transactions table
+
+Create and use this so “Recent activity” and points history are correct:
+
+```sql
+CREATE TABLE IF NOT EXISTS points_transactions (
+  id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id           UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  transaction_type  VARCHAR(20) NOT NULL CHECK (transaction_type IN ('earned', 'spent')),
+  points_amount     INT NOT NULL CHECK (points_amount > 0),
+  description       TEXT,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_points_transactions_user_created
+  ON points_transactions(user_id, created_at DESC);
+```
+
+**When to insert:**
+
+| Event | transaction_type | points_amount | description (example) |
+|-------|------------------|---------------|------------------------|
+| Check-in | `earned` | 1 or 6 | `Daily check-in day N` |
+| Content submission | `earned` | 1 | `Content submission` |
+| Unlock content | `spent` | 5 | `Unlocked content` |
+| Unlock theme | `spent` | 50 | `Unlocked theme: <name>` (or theme id) |
+| Welcome/signup | `earned` | 5 | `Welcome bonus` |
+
+Earned: add to `points_balance` (and optionally `total_points_earned`), then insert. Spent: subtract from `points_balance`, then insert.
+
+---
+
+## 7. Users table (balance columns)
+
+```sql
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS points_balance INT NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS total_points_earned INT NOT NULL DEFAULT 0;
+```
+
+Use **points_balance** in profile, stats, unlock, check-in, and submit.
+
+---
+
+## 8. Award 1 point on every content submit
+
+On **every** successful **POST /content/submit** (after inserting the content/feed row):
+
+1. **UPDATE users**  
+   `SET points_balance = points_balance + 1, total_points_earned = total_points_earned + 1 WHERE id = :user_id`
+2. **INSERT into points_transactions**  
+   `(user_id, transaction_type, points_amount, description) VALUES (:user_id, 'earned', 1, 'Content submission')`
+
+Use the authenticated submitter’s id for both. Do this every time (no “first time only” logic).
+
+**Parameterized SQL example:**
+
+```sql
+UPDATE users
+SET points_balance = points_balance + 1,
+    total_points_earned = total_points_earned + 1
+WHERE id = $1;
+
+INSERT INTO points_transactions (user_id, transaction_type, points_amount, description)
+VALUES ($1, 'earned', 1, 'Content submission');
+```
+
+---
+
+## 9. Content unlock: 5 points, 1 per category per day
+
+When **POST /content/:id/unlock** runs:
+
+1. Check the content’s **category** (encouragement, inspiration, jokes, facts). Enforce **max 1 unlock per category per user per calendar day** (e.g. count unlocks in `content_unlocks` or equivalent for today + this category + this user). If limit already reached, return `400` with `{ "error": "Daily unlock limit reached for this category", "category": "…" }`.
+2. Check `points_balance >= 5`.
+3. `UPDATE users SET points_balance = points_balance - 5 WHERE id = :user_id`.
+4. `INSERT INTO points_transactions (user_id, transaction_type, points_amount, description) VALUES (:user_id, 'spent', 5, 'Unlocked content');`
+5. Mark content as unlocked for that user (and record the category + date for the daily limit).
+
+**Result:** User can unlock at most **4 content items per day** (one per category).
+
+---
+
+## 9b. Theme unlock: 50 points per theme
+
+When **POST /themes/:id/unlock** runs:
+
+1. Check the user has not already unlocked this theme (one-time per theme per user).
+2. Check `points_balance >= 50`.
+3. `UPDATE users SET points_balance = points_balance - 50 WHERE id = :user_id`.
+4. `INSERT INTO points_transactions (user_id, transaction_type, points_amount, description) VALUES (:user_id, 'spent', 50, 'Unlocked theme');` (optionally include theme name in description).
+5. Record that this theme is unlocked for this user (e.g. `user_themes` or a `themes_unlocked` table).
+
+---
+
+## 10. Check-in: add reward and record
+
+When **POST /checkin** runs:
+
+1. **Reward:** normal day = **1**; every 5th day (5, 10, 15, …) = **6**.  
+   Example: `reward = (new_streak_or_day % 5 == 0) ? 6 : 1`.
+2. `UPDATE users SET points_balance = points_balance + :reward, total_points_earned = total_points_earned + :reward, ... WHERE id = :user_id`.
+3. `INSERT INTO points_transactions (..., points_amount, description) VALUES (..., :reward, 'Daily check-in day ' || :day);`
+4. Return **points_earned** (1 or 6), **total_points**, **new_streak**.
+
+**GET /checkin/info:** Return **next_points** = 1 or 6 (6 when `(total_checkins + 1) % 5 == 0`).
+
+---
+
+## 11. Points history
+
+**GET /users/points-history** must return paginated rows from **points_transactions** for the authenticated user, descending by `created_at`. Response shape is documented in the Endpoints section above.
+
+---
+
+## 12. Summary checklist
+
+| Item | Action |
+|------|--------|
+| Single balance | Use `points_balance` for profile, stats, unlock, check-in, submit. |
+| Submit | **POST /content/submit** → award 1 point + insert `earned` transaction every time. |
+| Check-in | 1 pt normal; 6 pts every 5th day. Return `points_earned`, `total_points`. **GET /checkin/info** return `next_points` (1 or 6). |
+| Content unlock | 5 pts each; max 1 per category per day (4/day total). Deduct 5; insert `spent` transaction. |
+| Theme unlock | 50 pts per theme (one-time). Deduct 50; insert `spent` transaction. |
+| Feed | **GET /content/feed** returns all users’ submissions (no filter by current user). Use `content` with `submitted_by IS NOT NULL` or a dedicated `feed_posts` table. |
+| Login identity | Same email/provider → same `users.id`; profile includes `points_balance` and `total_points_earned`. |
+| Transactions | Insert a row in `points_transactions` on every earn/spend. |

@@ -15,8 +15,12 @@ enum Constants {
     static let subsequentUnlockCost = 5
     /// Max number of items the user can see and unlock per category per day (e.g. 2 = first free + one paid).
     static let maxDailyContentPerCategory = 2
-    /// Free points awarded when the user submits content (backend should also award and record in points_transactions).
+    /// Points awarded when the user submits content (backend must award this and record in points_transactions).
     static let pointsRewardForContentSubmission = 1
+    /// Points for a normal daily check-in (backend must use this; every 5th day add everyFiveDaysBonusPoints).
+    static let dailyCheckinBasePoints = 1
+    /// Extra points on every 5th check-in day (day 5, 10, 15, …). That day total = dailyCheckinBasePoints + this = 6.
+    static let everyFiveDaysBonusPoints = 5
     
     // Cache keys
     static let cachedContentPrefix = "cached_content_"
