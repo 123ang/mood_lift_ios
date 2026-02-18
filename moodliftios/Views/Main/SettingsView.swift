@@ -37,8 +37,16 @@ struct SettingsView: View {
         }
         .sheet(isPresented: $showThemePicker) { ThemePickerView() }
         .sheet(isPresented: $viewModel.showChangePassword) { changePasswordSheet }
-        .sheet(isPresented: $showPrivacyPolicy) { legalSheet(title: "Privacy Policy", content: privacyPolicyText) }
-        .sheet(isPresented: $showTermsOfService) { legalSheet(title: "Terms of Service", content: termsOfServiceText) }
+        .sheet(isPresented: $showPrivacyPolicy) {
+            LegalDocumentScreen(title: "Privacy Policy", content: privacyPolicyText)
+                .environment(\.themeManager, themeManager)
+                .onDisappear { showPrivacyPolicy = false }
+        }
+        .sheet(isPresented: $showTermsOfService) {
+            LegalDocumentScreen(title: "Terms of Service", content: termsOfServiceText)
+                .environment(\.themeManager, themeManager)
+                .onDisappear { showTermsOfService = false }
+        }
         .alert("Sign out?", isPresented: $showSignOutAlert) {
             Button("Cancel", role: .cancel) {}
             Button("Sign out", role: .destructive) { Task { await viewModel.signOut() } }
@@ -213,8 +221,10 @@ struct SettingsView: View {
                         .font(.caption.weight(.medium))
                         .foregroundStyle(palette.mutedText)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, Theme.spaceM)
                 .padding(.vertical, Theme.spaceM)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .background(palette.card)
@@ -229,13 +239,21 @@ struct SettingsView: View {
         return VStack(alignment: .leading, spacing: 0) {
             SectionHeader(icon: "questionmark.circle.fill", title: "Support & legal", tint: palette.brandTint, textColor: palette.text, subtitleColor: palette.mutedText)
             VStack(spacing: 0) {
-                Button { showPrivacyPolicy = true } label: { settingsRow(icon: "hand.raised.fill", title: "Privacy Policy", palette: palette) }
+                Button { showPrivacyPolicy = true } label: {
+                    settingsRow(icon: "hand.raised.fill", title: "Privacy Policy", palette: palette)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                }
                 .buttonStyle(.plain)
                 Rectangle()
                     .fill(palette.border.opacity(0.12))
                     .frame(height: 1)
                     .padding(.leading, 56)
-                Button { showTermsOfService = true } label: { settingsRow(icon: "doc.text.fill", title: "Terms of Service", palette: palette) }
+                Button { showTermsOfService = true } label: {
+                    settingsRow(icon: "doc.text.fill", title: "Terms of Service", palette: palette)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                }
                 .buttonStyle(.plain)
             }
             .background(palette.card)
@@ -396,27 +414,6 @@ struct SettingsView: View {
         }
     }
 
-    private func legalSheet(title: String, content: String) -> some View {
-        NavigationStack {
-            ScrollView {
-                Text(content)
-                    .font(.themeCallout())
-                    .foregroundStyle(Color.darkText)
-                    .padding(Theme.spaceL)
-            }
-            .navigationTitle(title)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") {
-                        showPrivacyPolicy = false
-                        showTermsOfService = false
-                    }
-                    .foregroundStyle(Color.brandPrimary)
-                }
-            }
-        }
-    }
 
     private func updateReminderDate() {
         var components = DateComponents()
@@ -429,59 +426,333 @@ struct SettingsView: View {
 
     private var privacyPolicyText: String {
         """
-        Privacy Policy for MoodLift
+        Privacy Policy — MoodLift
 
-        Last updated: 2024
+        Last updated: 18 February 2026
+        Developer / Owner: SunTzu Technologies
+        Contact: suntzutechnologies@gmail.com
 
-        Your privacy is important to us. This privacy policy explains how MoodLift collects, uses, and protects your personal information.
+        —
 
-        Information We Collect:
-        - Account information (email, username)
-        - Usage data (check-ins, points, saved items)
-        - Device information for push notifications
+        1. Introduction
 
-        How We Use Your Information:
-        - To provide and improve our services
-        - To send daily reminders (if enabled)
-        - To track your progress and streaks
+        MoodLift ("the App") is designed to provide users with daily emotional support through encouragement messages, inspirational quotes, jokes, and fun facts.
 
-        Data Protection:
-        - All data is encrypted in transit
-        - We do not sell your personal information
-        - You can request data deletion at any time
+        Your privacy is important to us.
+        This Privacy Policy explains how MoodLift collects, uses, and protects your information when you use the application.
 
-        Contact us at support@moodlift.app for any privacy concerns.
+        By using MoodLift, you agree to the collection and use of information in accordance with this policy.
+
+        —
+
+        2. Information We Collect
+
+        2.1 Information You Provide
+
+        MoodLift does not require account registration to use its main features.
+
+        However, the app may store:
+        • Your selected preferences (categories, mood interests)
+        • Notification settings
+        • Theme and customization choices
+
+        These are stored locally on your device.
+
+        —
+
+        2.2 Automatically Collected Information
+
+        To improve app stability and performance, we may collect:
+        • Device type and OS version
+        • App version
+        • Anonymous usage statistics (e.g., feature usage frequency)
+        • Crash logs and error reports
+
+        This data is anonymous and cannot identify you personally.
+
+        —
+
+        2.3 Notifications
+
+        If you enable notifications, the app stores:
+        • Reminder schedule
+        • Notification preferences
+
+        MoodLift does not read your messages, contacts, photos, or personal files.
+
+        —
+
+        3. How We Use Information
+
+        We use collected information only to:
+        • Deliver daily messages
+        • Improve app performance and stability
+        • Fix bugs and crashes
+        • Personalize user experience
+        • Improve content quality
+
+        We do NOT sell or rent your data to anyone.
+
+        —
+
+        4. Data Storage
+
+        Most MoodLift data is stored locally on your device.
+
+        Some anonymous analytics or crash reports may be processed through secure third-party services solely to improve the app.
+
+        We do not store personal identity data on our servers.
+
+        —
+
+        5. Third-Party Services
+
+        MoodLift may use trusted third-party tools (e.g., analytics or crash reporting services) that process limited technical data.
+
+        These services:
+        • Do not receive your personal identity
+        • Do not track you across other apps
+        • Are used only for app improvement
+
+        —
+
+        6. Children's Privacy
+
+        MoodLift is suitable for general audiences.
+        We do not knowingly collect personal information from children under 13.
+
+        If a parent believes a child has provided personal information, please contact us and we will remove it immediately.
+
+        —
+
+        7. Your Rights
+
+        You can control your data anytime by:
+        • Disabling notifications
+        • Resetting the app data
+        • Uninstalling the app
+
+        Uninstalling the app removes all locally stored data.
+
+        —
+
+        8. Security
+
+        We implement reasonable security measures to protect information from unauthorized access, alteration, or disclosure.
+
+        However, no digital system can guarantee absolute security.
+
+        —
+
+        9. Changes to This Policy
+
+        We may update this Privacy Policy from time to time.
+        Changes will be posted inside the app or website.
+
+        Continued use of the app means you accept the updated policy.
+
+        —
+
+        10. Contact Us
+
+        If you have any questions about this Privacy Policy:
+
+        SunTzu Technologies
+        📧 suntzutechnologies@gmail.com
         """
     }
 
     private var termsOfServiceText: String {
         """
-        Terms of Service for MoodLift
+        Terms of Service — MoodLift
 
-        Last updated: 2024
+        Last updated: 18 February 2026
+        Developer / Owner: SunTzu Technologies
+        Contact: suntzutechnologies@gmail.com
 
-        By using MoodLift, you agree to these terms:
+        —
 
-        1. Account Responsibility
-        You are responsible for maintaining the security of your account and password.
+        1. Acceptance of Terms
 
-        2. Acceptable Use
-        You agree not to submit inappropriate, offensive, or harmful content.
+        By downloading, installing, or using MoodLift ("the App"), you agree to be bound by these Terms of Service.
 
-        3. Points System
-        Points are earned through daily check-ins and engagement. Points have no monetary value.
+        If you do not agree with any part of these terms, please do not use the application.
 
-        4. Content Submission
-        Content you submit may be reviewed and moderated. We reserve the right to remove any content.
+        —
 
-        5. Service Availability
-        We strive for 99.9% uptime but do not guarantee uninterrupted service.
+        2. Description of the Service
 
-        6. Modifications
-        We may update these terms at any time. Continued use constitutes acceptance.
+        MoodLift is a wellness and lifestyle application that delivers:
+        • Encouragement messages
+        • Inspirational quotes
+        • Jokes
+        • Fun facts
+        • Daily emotional support content
 
-        Contact us at support@moodlift.app for any questions.
+        The content is intended for general positivity and entertainment purposes only.
+
+        MoodLift is not a medical, psychological, or professional mental health service.
+
+        —
+
+        3. Not Medical Advice
+
+        MoodLift does not provide:
+        • Medical diagnosis
+        • Psychological therapy
+        • Counseling services
+        • Emergency support
+
+        If you are experiencing emotional distress, depression, or mental health crisis, please contact a qualified professional or local emergency services.
+
+        The app should not be used as a substitute for professional care.
+
+        —
+
+        4. User Responsibilities
+
+        You agree to:
+        • Use the app lawfully
+        • Not attempt to reverse engineer or hack the app
+        • Not misuse the service in a harmful or abusive manner
+        • Not redistribute app content commercially without permission
+
+        —
+
+        5. Content Disclaimer
+
+        MoodLift provides automatically generated and curated content.
+
+        We do not guarantee that:
+        • All messages will be accurate
+        • Content will always match your personal beliefs
+        • Every message will positively affect your mood
+
+        Content is subjective and varies by individual experience.
+
+        —
+
+        6. Intellectual Property
+
+        All app design, branding, and compiled content belong to:
+
+        SunTzu Technologies
+
+        You may not copy, reproduce, or redistribute any part of the app without written permission.
+
+        Quotes from public figures remain property of their respective owners.
+
+        —
+
+        7. Availability of Service
+
+        We strive to keep the app available but we do not guarantee:
+        • Continuous uptime
+        • Error-free operation
+        • Permanent feature availability
+
+        Features may be modified, added, or removed at any time without notice.
+
+        —
+
+        8. Limitation of Liability
+
+        SunTzu Technologies is not liable for:
+        • Emotional reactions to content
+        • Decisions made based on messages
+        • Loss of data from device issues
+        • App interruptions or bugs
+
+        You use the app at your own discretion.
+
+        —
+
+        9. Termination
+
+        We reserve the right to restrict or terminate access to the app if misuse or abuse is detected.
+
+        You may stop using the app anytime by uninstalling it.
+
+        —
+
+        10. Changes to Terms
+
+        We may update these Terms of Service periodically.
+        Continued use of MoodLift after updates means you accept the revised terms.
+
+        —
+
+        11. Contact
+
+        For questions regarding these Terms:
+
+        SunTzu Technologies
+        📧 suntzutechnologies@gmail.com
         """
+    }
+}
+
+// MARK: - Legal document sheet (Privacy Policy / Terms of Service) — themed, redesigned
+struct LegalDocumentView: View {
+    let title: String
+    let content: String
+    @Environment(\.themeManager) private var themeManager
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        let palette = themeManager.currentPalette
+        VStack(spacing: 0) {
+            // Themed header bar
+            HStack(spacing: Theme.spaceM) {
+                Text(title)
+                    .font(.themeTitle())
+                    .foregroundStyle(.white)
+                Spacer()
+                Button {
+                    dismiss()
+                } label: {
+                    Text("Done")
+                        .font(.themeHeadline())
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, Theme.spaceL)
+                        .padding(.vertical, Theme.spaceS)
+                        .background(Capsule().fill(.white.opacity(0.25)))
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, Theme.spaceM)
+            .padding(.vertical, Theme.spaceM)
+            .background(
+                LinearGradient(
+                    colors: [palette.primaryGradientStart, palette.primaryGradientEnd],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+
+            // Scrollable content: themed background + card-style content block
+            ScrollView(showsIndicators: true) {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(content)
+                        .font(.themeBody())
+                        .foregroundStyle(palette.text)
+                        .lineSpacing(8)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(Theme.spaceL)
+                .background(
+                    RoundedRectangle(cornerRadius: Theme.radiusLarge)
+                        .fill(palette.card)
+                        .shadow(color: Theme.cardShadow().color, radius: Theme.cardShadow().radius, y: Theme.cardShadow().y)
+                )
+                .padding(.horizontal, Theme.spaceM)
+                .padding(.top, Theme.spaceM)
+                .padding(.bottom, Theme.spaceXXL)
+            }
+            .background(palette.background)
+        }
+        .background(palette.background)
     }
 }
 

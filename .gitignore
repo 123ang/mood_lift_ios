@@ -19,3 +19,4 @@ Pods/
 # Keep: project.pbxproj is required for the app to build.
 *.xcuserstate
 *.xcuserstate
+*.xcuserstate

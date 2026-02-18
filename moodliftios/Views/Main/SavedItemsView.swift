@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct SavedItemsView: View {
+    @Environment(\.themeManager) private var themeManager
     @State private var viewModel = SavedItemsViewModel()
     @State private var itemToDelete: SavedItem?
     @State private var showDeleteAlert = false
@@ -9,22 +10,15 @@ struct SavedItemsView: View {
         [(nil, "All", nil)] + ContentCategory.allCases.map { ($0.rawValue, $0.displayName, $0.imageAssetName) }
     }
 
-    private var headerGradient: LinearGradient {
-        LinearGradient(
-            colors: [Color.primaryGradientStart, Color.primaryGradientEnd],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-    }
-
     var body: some View {
+        let palette = themeManager.currentPalette
         VStack(spacing: 0) {
-            headerSection
-            categorySelectorSection
-            contentSection
+            headerSection(palette: palette)
+            categorySelectorSection(palette: palette)
+            contentSection(palette: palette)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .background(Color.appBackground)
+        .background(palette.background)
         .navigationBarTitleDisplayMode(.inline)
         .task { await viewModel.loadSavedItems() }
         .refreshable { await viewModel.loadSavedItems() }
@@ -41,7 +35,7 @@ struct SavedItemsView: View {
     }
 
     // MARK: - Header (colored bar like Settings/Preferences; separates top from content)
-    private var headerSection: some View {
+    private func headerSection(palette: ThemePalette) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: Theme.spaceM) {
                 Image(systemName: "bookmark.fill")
@@ -59,7 +53,13 @@ struct SavedItemsView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, Theme.spaceM)
         .padding(.vertical, Theme.spaceL)
-        .background(headerGradient)
+        .background(
+            LinearGradient(
+                colors: [palette.primaryGradientStart, palette.primaryGradientEnd],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
     }
 
     private var savedSubtitle: String {
@@ -69,7 +69,7 @@ struct SavedItemsView: View {
     }
 
     // MARK: - Category selector (icons only; selected = filled, unselected = outline)
-    private var categorySelectorSection: some View {
+    private func categorySelectorSection(palette: ThemePalette) -> some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: Theme.spaceS) {
                 ForEach(Array(categoryChipOptions.enumerated()), id: \.offset) { _, option in
@@ -78,7 +78,8 @@ struct SavedItemsView: View {
                         imageAssetName: option.imageAssetName,
                         isAll: option.id == nil,
                         isSelected: viewModel.selectedCategory == option.id,
-                        color: chipColor(for: option.id)
+                        color: chipColor(for: option.id),
+                        palette: palette
                     ) {
                         withAnimation(.easeInOut(duration: 0.25)) {
                             viewModel.filterByCategory(option.id)
@@ -90,7 +91,7 @@ struct SavedItemsView: View {
             .padding(.vertical, Theme.spaceM)
         }
         .padding(.bottom, Theme.spaceS)
-        .background(Color.appBackground)
+        .background(palette.background)
     }
 
     private func chipColor(for id: String?) -> Color {
@@ -99,14 +100,14 @@ struct SavedItemsView: View {
     }
 
     // MARK: - Content (fills remaining height so whole page is used)
-    private var contentSection: some View {
+    private func contentSection(palette: ThemePalette) -> some View {
         Group {
             if viewModel.isLoading {
-                loadingState
+                loadingState(palette: palette)
             } else if viewModel.filteredItems.isEmpty {
-                emptyState
+                emptyState(palette: palette)
             } else {
-                savedItemsList
+                savedItemsList(palette: palette)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -117,11 +118,11 @@ struct SavedItemsView: View {
         )))
     }
 
-    private var savedItemsList: some View {
+    private func savedItemsList(palette: ThemePalette) -> some View {
         ScrollView(showsIndicators: false) {
             LazyVStack(spacing: Theme.spaceM) {
                 ForEach(viewModel.filteredItems) { item in
-                    SavedItemCard(item: item) {
+                    SavedItemCard(item: item, palette: palette) {
                         itemToDelete = item
                         showDeleteAlert = true
                     }
@@ -133,36 +134,36 @@ struct SavedItemsView: View {
         }
     }
 
-    private var loadingState: some View {
+    private func loadingState(palette: ThemePalette) -> some View {
         VStack(spacing: Theme.spaceM) {
             Spacer()
             ProgressView()
                 .scaleEffect(1.1)
-                .tint(Color.brandPrimary)
+                .tint(palette.brandTint)
             Text("Loading your collection...")
                 .font(.themeCallout())
-                .foregroundStyle(Color.lightText)
+                .foregroundStyle(palette.mutedText)
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - Empty state (closer to selector; warm, browsing-memories tone)
-    private var emptyState: some View {
+    private func emptyState(palette: ThemePalette) -> some View {
         VStack(spacing: Theme.spaceM) {
             Spacer(minLength: 0)
             Image(systemName: "heart.text.square")
                 .font(.system(size: 40, weight: .light))
-                .foregroundStyle(Color.brandPrimary.opacity(0.5))
+                .foregroundStyle(palette.brandTint.opacity(0.5))
             Text(viewModel.selectedCategory != nil ? "Nothing here yet" : "Your collection is empty")
                 .font(.themeHeadline())
-                .foregroundStyle(Color.darkText)
+                .foregroundStyle(palette.text)
                 .multilineTextAlignment(.center)
             Text(viewModel.selectedCategory != nil
                  ? "Save something from this category and it’ll show up here."
                  : "Save content you love and it'll appear here.")
                 .font(.themeCallout())
-                .foregroundStyle(Color.lightText)
+                .foregroundStyle(palette.mutedText)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, Theme.spaceL)
             Spacer(minLength: 0)
@@ -178,6 +179,7 @@ private struct SavedCategoryChip: View {
     let isAll: Bool
     let isSelected: Bool
     let color: Color
+    var palette: ThemePalette
     let action: () -> Void
 
     private let iconSize: CGFloat = 30
@@ -185,7 +187,7 @@ private struct SavedCategoryChip: View {
     var body: some View {
         Button(action: action) {
             chipIcon
-                .foregroundStyle(isSelected ? (isAll ? Color.darkText : .white) : color.opacity(0.9))
+                .foregroundStyle(isSelected ? (isAll ? palette.text : .white) : color.opacity(0.9))
                 .frame(width: 54, height: 54)
                 .background(Circle().fill(chipBackground))
                 .overlay(Circle().strokeBorder(color.opacity(isSelected ? 0 : 0.5), lineWidth: 1))
@@ -213,13 +215,14 @@ private struct SavedCategoryChip: View {
 
     private var chipBackground: Color {
         guard isSelected else { return .clear }
-        return isAll ? Color.mutedText.opacity(0.25) : color
+        return isAll ? palette.mutedText.opacity(0.25) : color
     }
 }
 
 // MARK: - Saved Item Card (soft fill, no thick borders; content-first hierarchy)
 private struct SavedItemCard: View {
     let item: SavedItem
+    var palette: ThemePalette
     let onDelete: () -> Void
 
     private var categoryEnum: ContentCategory? { ContentCategory(rawValue: item.category) }
@@ -237,11 +240,11 @@ private struct SavedItemCard: View {
             // Primary: saved content text
             Text(item.displayText)
                 .font(.themeBodyMedium())
-                .foregroundStyle(Color.darkText)
+                .foregroundStyle(palette.text)
                 .lineLimit(5)
                 .fixedSize(horizontal: false, vertical: true)
 
-            if item.contentType == "quiz" { quizOptionsView }
+            if item.contentType == "quiz" { quizOptionsView(palette: palette) }
             if item.contentType == "qa", let answer = item.answer {
                 HStack(alignment: .top, spacing: 6) {
                     Text("A:")
@@ -249,7 +252,7 @@ private struct SavedItemCard: View {
                         .foregroundStyle(Color.successSoft)
                     Text(answer)
                         .font(.themeCaption())
-                        .foregroundStyle(Color.lightText)
+                        .foregroundStyle(palette.mutedText)
                         .lineLimit(3)
                 }
                 .padding(Theme.spaceS)
@@ -263,12 +266,12 @@ private struct SavedItemCard: View {
                 if let author = item.author, !author.isEmpty {
                     Text(author)
                         .font(.themeCaption())
-                        .foregroundStyle(Color.lightText)
+                        .foregroundStyle(palette.mutedText)
                 }
                 if let savedAt = item.savedAt {
                     Text(savedAt.formatted(date: .abbreviated, time: .omitted))
                         .font(.themeCaption())
-                        .foregroundStyle(Color.mutedText)
+                        .foregroundStyle(palette.mutedText)
                 }
                 Spacer(minLength: 0)
                 Button(action: onDelete) {
@@ -282,13 +285,13 @@ private struct SavedItemCard: View {
         }
         .padding(Theme.spaceM)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(categoryLightColor)
+        .background(palette.card)
         .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMedium))
         .shadow(color: Theme.cardShadow().color, radius: Theme.cardShadow().radius, y: Theme.cardShadow().y)
     }
 
     @ViewBuilder
-    private var quizOptionsView: some View {
+    private func quizOptionsView(palette: ThemePalette) -> some View {
         let options = [
             ("A", item.optionA), ("B", item.optionB), ("C", item.optionC), ("D", item.optionD)
         ].compactMap { label, value in value.map { (label, $0) } }
@@ -297,10 +300,10 @@ private struct SavedItemCard: View {
                 HStack(spacing: 6) {
                     Text("\(label).")
                         .font(.themeCaptionMedium())
-                        .foregroundStyle(label == item.correctOption ? Color.successSoft : Color.lightText)
+                        .foregroundStyle(label == item.correctOption ? Color.successSoft : palette.mutedText)
                     Text(value)
                         .font(.themeCaption())
-                        .foregroundStyle(label == item.correctOption ? Color.successSoft : Color.lightText)
+                        .foregroundStyle(label == item.correctOption ? Color.successSoft : palette.mutedText)
                     if label == item.correctOption {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.caption2)

@@ -1,41 +1,35 @@
 import SwiftUI
 
 struct MyContentView: View {
+    @Environment(\.themeManager) private var themeManager
     @State private var viewModel = ProfileViewModel()
     @State private var selectedItem: ContentItem?
     @State private var itemToRemove: ContentItem?
     @State private var showRemoveAlert = false
     private let mySubmittedStore = MySubmittedContentStore.shared
 
-    private var headerGradient: LinearGradient {
-        LinearGradient(
-            colors: [Color.primaryGradientStart, Color.primaryGradientEnd],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-    }
-
     var body: some View {
+        let palette = themeManager.currentPalette
         VStack(spacing: 0) {
-            headerSection
+            headerSection(palette: palette)
             if viewModel.isLoadingMyContent && viewModel.myContent.isEmpty {
                 Spacer()
                 ProgressView()
-                    .tint(.brandPrimary)
+                    .tint(palette.brandTint)
                 Text("Loading your content...")
                     .font(.themeCallout())
-                    .foregroundStyle(Color.lightText)
+                    .foregroundStyle(palette.mutedText)
                     .padding(.top, Theme.spaceM)
                 Spacer()
             } else if viewModel.myContent.isEmpty {
                 Spacer()
-                emptyState
+                emptyState(palette: palette)
                 Spacer()
             } else {
                 ScrollView(showsIndicators: false) {
                     LazyVStack(spacing: Theme.spaceM) {
                         ForEach(viewModel.myContent) { item in
-                            MyContentRow(item: item, onTap: { selectedItem = item }, onRemove: {
+                            MyContentRow(item: item, palette: palette, onTap: { selectedItem = item }, onRemove: {
                                 itemToRemove = item
                                 showRemoveAlert = true
                             })
@@ -48,7 +42,7 @@ struct MyContentView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .background(Color.appBackground)
+        .background(palette.background)
         .navigationBarTitleDisplayMode(.inline)
         .task { await viewModel.loadMyContent() }
         .refreshable { await viewModel.loadMyContent() }
@@ -71,7 +65,7 @@ struct MyContentView: View {
         }
     }
 
-    private var headerSection: some View {
+    private func headerSection(palette: ThemePalette) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: Theme.spaceM) {
                 Image(systemName: "doc.text.fill")
@@ -89,7 +83,13 @@ struct MyContentView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, Theme.spaceM)
         .padding(.vertical, Theme.spaceL)
-        .background(headerGradient)
+        .background(
+            LinearGradient(
+                colors: [palette.primaryGradientStart, palette.primaryGradientEnd],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
     }
 
     private var headerSubtitle: String {
@@ -102,17 +102,17 @@ struct MyContentView: View {
         return "\(count) posts · \(total) likes"
     }
 
-    private var emptyState: some View {
+    private func emptyState(palette: ThemePalette) -> some View {
         VStack(spacing: Theme.spaceM) {
             Image(systemName: "pencil.and.list.clipboard")
                 .font(.system(size: 44))
-                .foregroundStyle(Color.mutedText)
+                .foregroundStyle(palette.mutedText)
             Text("No posts yet")
                 .font(.themeHeadline())
-                .foregroundStyle(Color.darkText)
+                .foregroundStyle(palette.text)
             Text("Share encouragement, jokes, or fun facts from the Feeds tab and they'll show here with your like count.")
                 .font(.themeCaption())
-                .foregroundStyle(Color.lightText)
+                .foregroundStyle(palette.mutedText)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, Theme.spaceXL)
         }
@@ -122,6 +122,7 @@ struct MyContentView: View {
 // MARK: - Row: preview + likes, tappable + remove
 private struct MyContentRow: View {
     let item: ContentItem
+    var palette: ThemePalette
     let onTap: () -> Void
     let onRemove: () -> Void
 
@@ -148,7 +149,7 @@ private struct MyContentRow: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(item.displayText)
                             .font(.themeCallout())
-                            .foregroundStyle(Color.darkText)
+                            .foregroundStyle(palette.text)
                             .lineLimit(2)
                             .multilineTextAlignment(.leading)
                         HStack(spacing: Theme.spaceS) {
@@ -157,10 +158,10 @@ private struct MyContentRow: View {
                                 .foregroundStyle(categoryColor)
                             if let date = item.createdAt {
                                 Text("·")
-                                    .foregroundStyle(Color.mutedText)
+                                    .foregroundStyle(palette.mutedText)
                                 Text(date.formatted(.relative(presentation: .named)))
                                     .font(.themeCaption())
-                                    .foregroundStyle(Color.lightText)
+                                    .foregroundStyle(palette.mutedText)
                             }
                         }
                     }
@@ -172,15 +173,15 @@ private struct MyContentRow: View {
                                 .foregroundStyle(categoryColor)
                             Text("\(item.score)")
                                 .font(.themeHeadline())
-                                .foregroundStyle(Color.darkText)
+                                .foregroundStyle(palette.text)
                         }
                         Text("likes")
                             .font(.themeCaption())
-                            .foregroundStyle(Color.lightText)
+                            .foregroundStyle(palette.mutedText)
                     }
                     Image(systemName: "chevron.right")
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Color.lightText)
+                        .foregroundStyle(palette.mutedText)
                 }
             }
             .buttonStyle(.plain)
@@ -194,7 +195,7 @@ private struct MyContentRow: View {
             .buttonStyle(.plain)
         }
         .padding(Theme.spaceM)
-        .background(Color.cardBackground)
+        .background(palette.card)
         .clipShape(RoundedRectangle(cornerRadius: Theme.radiusLarge))
         .shadow(color: Theme.cardShadow().color, radius: Theme.cardShadow().radius, y: Theme.cardShadow().y)
     }
@@ -204,6 +205,7 @@ private struct MyContentRow: View {
 private struct MyContentDetailSheet: View {
     let item: ContentItem
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.themeManager) private var themeManager
 
     private var categoryColor: Color {
         (ContentCategory(rawValue: item.category) ?? .encouragement).color
@@ -214,6 +216,7 @@ private struct MyContentDetailSheet: View {
     }
 
     var body: some View {
+        let palette = themeManager.currentPalette
         NavigationStack {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: Theme.spaceL) {
@@ -229,11 +232,11 @@ private struct MyContentDetailSheet: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(categoryName)
                                 .font(.themeSubheadline())
-                                .foregroundStyle(Color.darkText)
+                                .foregroundStyle(palette.text)
                             if let date = item.createdAt {
                                 Text(date.formatted(date: .abbreviated, time: .shortened))
                                     .font(.themeCaption())
-                                    .foregroundStyle(Color.lightText)
+                                    .foregroundStyle(palette.mutedText)
                             }
                         }
                         Spacer()
@@ -241,12 +244,12 @@ private struct MyContentDetailSheet: View {
 
                     Text(item.displayText)
                         .font(.themeBody())
-                        .foregroundStyle(Color.darkText)
+                        .foregroundStyle(palette.text)
                         .multilineTextAlignment(.leading)
                     if let answer = item.answer, !answer.isEmpty, item.contentType == "qa" {
                         Text(answer)
                             .font(.themeCallout())
-                            .foregroundStyle(Color.lightText)
+                            .foregroundStyle(palette.mutedText)
                             .italic()
                     }
 
@@ -256,14 +259,14 @@ private struct MyContentDetailSheet: View {
                                 .foregroundStyle(categoryColor)
                             Text("\(item.upvotes) upvotes")
                                 .font(.themeCaption())
-                                .foregroundStyle(Color.lightText)
+                                .foregroundStyle(palette.mutedText)
                         }
                         HStack(spacing: 4) {
                             Image(systemName: "hand.thumbsdown.fill")
-                                .foregroundStyle(Color.lightText)
+                                .foregroundStyle(palette.mutedText)
                             Text("\(item.downvotes) downvotes")
                                 .font(.themeCaption())
-                                .foregroundStyle(Color.lightText)
+                                .foregroundStyle(palette.mutedText)
                         }
                         Spacer()
                         Text("Net: \(item.score) likes")
@@ -273,19 +276,19 @@ private struct MyContentDetailSheet: View {
                     .padding(.top, Theme.spaceS)
                 }
                 .padding(Theme.spaceL)
-                .background(Color.cardBackground)
+                .background(palette.card)
                 .clipShape(RoundedRectangle(cornerRadius: Theme.radiusLarge))
                 .shadow(color: Theme.cardShadow().color, radius: Theme.cardShadow().radius, y: Theme.cardShadow().y)
                 .padding(.horizontal, Theme.spaceM)
             }
-            .background(Color.appBackground)
+            .background(palette.background)
             .navigationTitle("Your post")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
                         .font(.themeHeadline())
-                        .foregroundStyle(Color.brandPrimary)
+                        .foregroundStyle(palette.brandTint)
                 }
             }
         }
