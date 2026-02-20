@@ -21,3 +21,4 @@ Pods/
 *.xcuserstate
 *.xcuserstate
 *.xcuserstate
+.DS_Store
